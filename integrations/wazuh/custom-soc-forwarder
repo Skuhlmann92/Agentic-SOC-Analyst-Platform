@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""Wazuh Manager custom integration -> SOC ingestion endpoint.
+
+Wazuh integratord arguments:
+ argv[1]: path to a temporary alert JSON file
+ argv[2]: configured api_key
+ argv[3]: configured hook_url
+Install on the Wazuh MANAGER, not on every agent endpoint.
+"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+
+def main() -> int:
+    if len(sys.argv) < 4:
+        print("Missing Wazuh Integrator arguments", file=sys.stderr)
+        return 2
+    filename, token, url = sys.argv[1:4]
+    if not token or not url.startswith("https://"):
+        print("An HTTPS webhook and API token are required", file=sys.stderr)
+        return 2
+    with open(filename, encoding="utf-8") as handle:
+        payload = json.load(handle)
+    # The dashboard stores normalized detection metadata rather than the raw log.
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json",
+            "X-SOC-Source": "wazuh",
+            "User-Agent": "wazuh-soc-forwarder/1.0",
+        },
+        method="POST",
+    )
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=12) as response:
+                if response.status == 200:
+                    return 0
+                print("SOC endpoint status:", response.status, file=sys.stderr)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            print("SOC forward attempt failed:", str(exc), file=sys.stderr)
+        if attempt < 2:
+            time.sleep(2 ** attempt)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
