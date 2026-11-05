@@ -39,6 +39,12 @@ export function CaseDetailView({ caseId }: { caseId: string }) {
         <StatusBadge value={item.severity} />
         <span className="text-sm text-muted-foreground">{item.assignee || "Unassigned"} · opened {formatTime(item.opened_at)}</span>
       </div>
+      {item.correlation?<section className="panel mb-4 rounded-xl p-4">
+       <h2 className="text-sm font-bold">Automatische Korrelation · Rule + Host + 60 Minuten</h2>
+       <p className="mt-2 text-sm text-muted-foreground">{item.correlation.explanation}. {item.correlation.alert_count} miteinander verknüpfte Meldungen auf {item.correlation.hostname}; Regel {item.correlation.rule_id}.</p>
+       <p className="mt-2 text-xs text-muted-foreground">Dies ist ein Analysehinweis, kein bestätigter Sicherheitsvorfall. Jeder Beleg lässt sich öffnen.</p>
+       <div className="mt-3 flex flex-wrap gap-2">{item.correlation.evidence_alert_ids.slice(0,20).map(id=><Link href={`/alerts/${id}`} key={id} className="rounded border border-border px-2 py-1 font-mono text-xs text-accent">Alert {id.slice(0,8)}</Link>)}</div>
+      </section>:null}
       {item.external_ref?.startsWith("CORR-")?<CorrelationAiPanel caseId={caseId}/>:null}
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="panel rounded-lg p-4">
