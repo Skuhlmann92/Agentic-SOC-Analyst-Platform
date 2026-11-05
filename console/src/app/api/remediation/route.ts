@@ -47,7 +47,7 @@ export async function POST(request:Request){
  if(!process.env.ANTHROPIC_API_KEY)return fail("no_key","ANTHROPIC_API_KEY missing",503);
  let body:Row;try{const b=await request.json();body=b&&typeof b==="object"&&!Array.isArray(b)?b:{};}catch{return fail("bad_json","Invalid JSON",400);}
  const mode=s(body.mode);if(!["batch","single"].includes(mode))return fail("bad_mode","Choose batch or single",422);
- let sql:ReturnType<typeof neon>;let alerts:Row[]=[];let hostname="";
+ let sql:Awaited<ReturnType<typeof init>>;let alerts:Row[]=[];let hostname="";
  try{
   sql=await init();
   if(mode==="batch"){
