@@ -1,6 +1,6 @@
 "use client";
 
-import {Activity,Bell,Bot,Briefcase,ClipboardCheck,LayoutDashboard,LogOut,Network,Settings,Shield,Sun,Moon,Globe,ChevronsUpDown,ShieldCheck,Menu,X} from "lucide-react";
+import {Activity,Bell,Bot,Briefcase,ClipboardCheck,LayoutDashboard,LogOut,Network,Settings,Shield,Sun,Moon,Globe,ChevronsUpDown,ShieldCheck,Menu,X,ScanSearch} from "lucide-react";
 import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {useState} from "react";
@@ -12,6 +12,7 @@ import {PreferencesProvider,usePreferences} from "@/lib/preferences";
 const NAV=[
  {href:"/dashboard",de:"Übersicht",en:"Overview",icon:LayoutDashboard,group:"monitor",admin:false,review:false},
  {href:"/alerts",de:"Sicherheitsmeldungen",en:"Alerts",icon:Bell,group:"monitor",admin:false,review:false},
+ {href:"/security-posture",de:"Sicherheitsbewertung",en:"Security posture",icon:ScanSearch,group:"monitor",admin:false,review:false},
  {href:"/entities",de:"Endgeräte & Nutzer",en:"Entities & hosts",icon:Network,group:"monitor",admin:false,review:false},
  {href:"/cases",de:"Vorfälle",en:"Cases",icon:Briefcase,group:"response",admin:false,review:false},
  {href:"/investigations",de:"Untersuchungen",en:"Investigations",icon:Activity,group:"response",admin:false,review:false},
