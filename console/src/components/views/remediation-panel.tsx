@@ -8,7 +8,7 @@ type Proposal={
  id:string;hostname:string;mode:"batch"|"single";status:string;
  summary:string;analysis:string;risk:string;powershell:string;verification:string;
  rollback:string;notes:string;requires_reboot:boolean;safety_flags:string[];
- alert_ids:string[];created_at:string;model:string;execution_enabled:boolean;
+ alert_ids:string[];created_at:string;model:string;execution_enabled:boolean;review_note?:string;reviewed_at?:string;needs_ast_validation?:boolean;
 };
 type Data={data:Proposal[];eligible_hosts:{hostname:string;count:number}[];threshold:number;max_batch:number};
 async function request<T>(method:"GET"|"POST",body?:object):Promise<T>{
@@ -27,11 +27,19 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
  const [host,setHost]=useState("");
  const [selected,setSelected]=useState("");
  const [message,setMessage]=useState("");
+ const [reviewNote,setReviewNote]=useState("");
+ const [acknowledged,setAcknowledged]=useState(false);
  const listing=useQuery({queryKey:["claude-remediations"],queryFn:()=>request<Data>("GET")});
  const batch=useMutation({mutationFn:(data:object)=>request<Proposal>("POST",data),
   onSuccess:async(data)=>{setSelected(data.id);setMessage("");await qc.invalidateQueries({queryKey:["claude-remediations"]});},
   onError:(error)=>setMessage(error instanceof Error?error.message:"Generation failed")
  });
+ const review=useMutation({mutationFn:async(action:"reviewed"|"rejected")=>{
+  if(!selectedDraft)throw Error("Select a draft");
+  const response=await fetch("/api/remediation/review",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:selectedDraft.id,action,note:reviewNote,acknowledged})});
+  const body=await response.json();if(!response.ok)throw Error(body?.error?.message||"Review failed");return body;
+ },onSuccess:async()=>{setAcknowledged(false);setReviewNote("");setMessage("");await qc.invalidateQueries({queryKey:["claude-remediations"]});},
+ onError:e=>setMessage(e instanceof Error?e.message:"Review failed")});
  const hosts=listing.data?.eligible_hosts||[];
  useEffect(()=>{if(!host&&hosts.length)setHost(hosts[0].hostname);},[host,hosts]);
  const selectedDraft=(listing.data?.data||[]).find(d=>d.id===selected)||listing.data?.data[0];
@@ -75,7 +83,7 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
    {selectedDraft?<div className="panel min-w-0 rounded-lg p-4 space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
      <h3 className="text-base font-semibold">{selectedDraft.mode==="batch"?t("Sammel-Skript","Combined script"):t("Einzel-Skript","Single script")} · {selectedDraft.hostname}</h3>
-     <span className="text-xs font-medium text-amber-400">{selectedDraft.status==="requires_security_review"?t("Zusätzliche Sicherheitsprüfung nötig","Security review required"):t("Manuelle Prüfung erforderlich","Human review required")}</span>
+     <span className="text-xs font-medium text-amber-400">{selectedDraft.status==="review_documented"?t("Prüfung dokumentiert · noch nicht AST-validiert","Review documented · AST validation pending"):selectedDraft.status==="rejected"?t("Abgelehnt","Rejected"):selectedDraft.status==="requires_security_review"?t("Zusätzliche Sicherheitsprüfung nötig","Security review required"):t("Manuelle Prüfung erforderlich","Human review required")}</span>
     </div>
     <p className="text-sm">{selectedDraft.summary}</p>
     <p className="text-sm text-muted-foreground">{selectedDraft.analysis}</p>
@@ -90,6 +98,15 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
     <div><h4 className="text-sm font-medium">{t("Rücknahme","Rollback")}</h4><pre className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{selectedDraft.rollback}</pre></div>
     <p className="text-sm text-muted-foreground">{selectedDraft.notes}</p>
     {selectedDraft.requires_reboot?<p className="text-sm text-amber-400">{t("Claude weist auf einen möglichen Neustart hin. Es wird kein Neustart ausgelöst.","Claude indicates a possible restart. No restart will be triggered.")}</p>:null}
+    <div className="rounded-lg border border-border p-4">
+     <h4 className="text-sm font-semibold">{t("Prüf- und Audit-Prozess","Human review and audit")}</h4>
+     <p className="mt-1 text-xs text-muted-foreground">{t("Der Review dokumentiert eine menschliche Prüfung. Er gibt keine Remote-Ausführung frei. PowerShell-AST-Prüfung, signierter Ausführungsplan und Termalin-Runner fehlen noch.","Review documents a human inspection only, NOT execution approval. PowerShell AST parsing, signed execution plan and Termalin runner are not yet available.")}</p>
+     {["awaiting_review","requires_security_review"].includes(selectedDraft.status)?<>
+      <textarea className="field mt-3 min-h-20" value={reviewNote} onChange={e=>setReviewNote(e.target.value)} placeholder={t("Prüfnotiz oder Ablehnungsgrund","Review note or reason for rejection")}/>
+      <label className="mt-2 flex items-start gap-2 text-xs"><input type="checkbox" checked={acknowledged} onChange={e=>setAcknowledged(e.target.checked)} />{t("Ich habe den Skriptinhalt, die Risiken und die vorgesehenen Änderungen selbst geprüft.","I personally inspected the script, risks and proposed changes.")}</label>
+      <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" disabled={!acknowledged||review.isPending} onClick={()=>review.mutate("reviewed")}>{t("Prüfung dokumentieren","Record review")}</Button><Button variant="secondary" size="sm" disabled={review.isPending} onClick={()=>review.mutate("rejected")}>{t("Vorschlag ablehnen","Reject proposal")}</Button></div>
+     </>:<p className="mt-3 text-xs text-muted-foreground">{selectedDraft.reviewed_at?selectedDraft.reviewed_at:""} {selectedDraft.review_note||""}</p>}
+    </div>
    </div>:null}
   </div>:null}
  </section>;
