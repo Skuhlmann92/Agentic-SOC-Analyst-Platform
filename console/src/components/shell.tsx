@@ -1,100 +1,82 @@
 "use client";
 
-import {
-  Activity,
-  Bell,
-  Bot,
-  Briefcase,
-  ClipboardCheck,
-  LayoutDashboard,
-  LogOut,
-  Network,
-  Settings,
-  Shield,
-} from "lucide-react";
+import {Activity,Bell,Bot,Briefcase,ClipboardCheck,LayoutDashboard,LogOut,Network,Settings,Shield,Sun,Moon,Globe,ChevronsUpDown,ShieldCheck,Menu,X} from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import {usePathname,useRouter} from "next/navigation";
+import {useState} from "react";
+import {Sentinel} from "@/components/sentinel/panel";
+import {canAdminister,canReview} from "@/lib/operators";
+import type {SessionClaims} from "@/lib/session-token";
+import {PreferencesProvider,usePreferences} from "@/lib/preferences";
 
-import { Sentinel } from "@/components/sentinel/panel";
-import { cn } from "@/lib/cn";
-import { canAdminister, canReview } from "@/lib/operators";
-import type { SessionClaims } from "@/lib/session-token";
+const NAV=[
+ {href:"/dashboard",de:"Übersicht",en:"Overview",icon:LayoutDashboard,group:"monitor",admin:false,review:false},
+ {href:"/alerts",de:"Sicherheitsmeldungen",en:"Alerts",icon:Bell,group:"monitor",admin:false,review:false},
+ {href:"/entities",de:"Endgeräte & Nutzer",en:"Entities & hosts",icon:Network,group:"monitor",admin:false,review:false},
+ {href:"/cases",de:"Vorfälle",en:"Cases",icon:Briefcase,group:"response",admin:false,review:false},
+ {href:"/investigations",de:"Untersuchungen",en:"Investigations",icon:Activity,group:"response",admin:false,review:false},
+ {href:"/agent-workspace",de:"KI-Agent & Skripte",en:"AI workspace",icon:Bot,group:"response",admin:false,review:false},
+ {href:"/reviews",de:"Freigaben",en:"Review queue",icon:ClipboardCheck,group:"response",admin:false,review:true},
+ {href:"/admin",de:"Verwaltung",en:"Administration",icon:Settings,group:"system",admin:true,review:false},
+] as const;
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, review: false, admin: false },
-  { href: "/alerts", label: "Alerts", icon: Bell, review: false, admin: false },
-  { href: "/cases", label: "Cases", icon: Briefcase, review: false, admin: false },
-  { href: "/investigations", label: "Investigations", icon: Activity, review: false, admin: false },
-  { href: "/entities", label: "Entities", icon: Network, review: false, admin: false },
-  { href: "/agent-workspace", label: "Agent workspace", icon: Bot, review: false, admin: false },
-  { href: "/reviews", label: "Review queue", icon: ClipboardCheck, review: true, admin: false },
-  { href: "/admin", label: "Administration", icon: Settings, review: false, admin: true },
-];
-
-export function Shell({ session, children }: { session: SessionClaims; children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const items = NAV.filter((item) => {
-    if (item.admin) return canAdminister(session.role);
-    if (item.review) return canReview(session.role);
-    return true;
+export function Shell({session,children}:{session:SessionClaims;children:React.ReactNode}){
+ return <PreferencesProvider><ShellContent session={session}>{children}</ShellContent></PreferencesProvider>;
+}
+function ShellContent({session,children}:{session:SessionClaims;children:React.ReactNode}){
+ const pathname=usePathname(),router=useRouter();
+ const {locale,setLocale,appearance,setAppearance,t}=usePreferences();
+ const [drawer,setDrawer]=useState(false);
+ const demo=session.tenantId==="11111111-1111-4111-8111-111111111111";
+ const items=NAV.filter(x=>x.admin?canAdminister(session.role):x.review?canReview(session.role):true);
+ async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
+ function nav(group:"monitor"|"response"|"system"){
+  return items.filter(x=>x.group===group).map(item=>{
+   const Icon=item.icon,active=pathname===item.href||pathname.startsWith(item.href+"/");
+   return <Link key={item.href} href={item.href} data-active={active} onClick={()=>setDrawer(false)} className="soc-nav-item relative">
+    <Icon className="h-[17px] w-[17px] shrink-0"/><span className="truncate">{locale==="de"?item.de:item.en}</span></Link>;
   });
-
-  async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
-  }
-
-  return (
-    <div className="grid min-h-screen grid-cols-[232px_1fr]">
-      <aside className="sticky top-0 flex h-screen flex-col border-r border-border bg-[#070d18]/95 px-3 py-4">
-        <div className="mb-6 flex items-center gap-2 px-2">
-          <Shield className="h-5 w-5 text-accent" />
-          <div>
-            <p className="text-sm font-semibold tracking-tight">SOC Console</p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Operations</p>
-          </div>
-        </div>
-        <nav className="space-y-1">
-          {items.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground",
-                  active && "bg-accent/10 text-foreground shadow-[inset_2px_0_0_hsl(var(--accent))]",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-auto space-y-3 px-2 pt-4">
-          <div>
-            <p className="text-sm">{session.name}</p>
-            <p className="text-xs capitalize text-muted-foreground">{session.role}</p>
-            <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{session.tenantId}</p>
-          </div>
-          <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground" onClick={signOut}>
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </button>
-        </div>
-      </aside>
-      <div className="min-w-0">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-[#070d18]/80 px-6 backdrop-blur">
-          <p className="text-sm text-muted-foreground">Task workspace · cited records · human approval</p>
-          <p className="font-mono text-xs text-muted-foreground">{session.tenantId}</p>
-        </header>
-        <main className="px-6 py-5">{children}</main>
-      </div>
-      <Sentinel role={session.role} />
+ }
+ const sidebar=<>
+  <div className="flex h-[73px] items-center gap-3 border-b border-border px-5">
+   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent"><Shield className="h-6 w-6"/></div>
+   <div className="min-w-0"><p className="text-sm font-bold tracking-tight">Sentinel SOC</p><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-muted-foreground">Security operations</p></div>
+   <button type="button" className="ml-auto lg:hidden" onClick={()=>setDrawer(false)} aria-label="Close navigation"><X size={17}/></button>
+  </div>
+  <div className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+   <div><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">{t("ÜBERWACHUNG","MONITORING")}</p><nav className="space-y-1">{nav("monitor")}</nav></div>
+   <div><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">{t("ERKENNUNG & REAKTION","DETECTION & RESPONSE")}</p><nav className="space-y-1">{nav("response")}</nav></div>
+   {items.some(x=>x.group==="system")?<div><p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">{t("SYSTEM","SYSTEM")}</p><nav>{nav("system")}</nav></div>:null}
+  </div>
+  <div className="border-t border-border px-4 py-4">
+   <div className="mb-3 rounded-xl bg-muted/45 px-3 py-3">
+    <div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${demo?"bg-warning":"bg-ok"}`}/><span className="text-xs font-semibold">{demo?t("Demoumgebung","Demo environment"):t("Live-Umgebung","Live environment")}</span></div>
+    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{demo?t("Beispieldaten · Keine echten Endgeräte","Sample data · No real endpoints"):t("Wazuh / EDR · Geschützter Bereich","Wazuh / EDR · Private workspace")}</p>
+   </div>
+   <div className="flex items-center gap-2">
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">{session.name.slice(0,2).toUpperCase()}</div>
+    <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{session.name}</p><p className="text-[11px] text-muted-foreground">{session.role}</p></div>
+    <button type="button" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={t("Abmelden","Sign out")} title={t("Abmelden","Sign out")} onClick={signOut}><LogOut size={17}/></button>
+   </div>
+  </div>
+ </>;
+ return <div className="min-h-screen lg:grid lg:grid-cols-[252px_minmax(0,1fr)]">
+  <aside className="shell-sidebar sticky top-0 hidden h-screen flex-col border-r border-border lg:flex">{sidebar}</aside>
+  {drawer?<><div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={()=>setDrawer(false)} aria-hidden/><aside className="shell-sidebar fixed inset-y-0 left-0 z-50 flex w-[270px] flex-col border-r border-border lg:hidden">{sidebar}</aside></>:null}
+  <div className="min-w-0">
+   <header className="shell-header sticky top-0 z-30 flex min-h-[73px] flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-7">
+    <button type="button" className="rounded-lg border border-border p-2 lg:hidden" onClick={()=>setDrawer(true)} aria-label="Open navigation"><Menu size={18}/></button>
+    <div className="min-w-0 flex-1">
+     <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><ShieldCheck size={13} className="text-accent"/>{t("Sicherheitszentrale","Security operations center")}<span className="opacity-40">/</span></div>
+     <h1 className="truncate text-sm font-semibold">{(() => {const x=items.find(i=>pathname===i.href||pathname.startsWith(i.href+"/"));return x?(locale==="de"?x.de:x.en):t("Übersicht","Overview");})()}</h1>
     </div>
-  );
+    <div className="flex items-center gap-2">
+     <div className="soc-toggle" aria-label="Language selector"><Globe size={14} className="ml-1 text-muted-foreground"/><button aria-pressed={locale==="de"} onClick={()=>setLocale("de")}>DE</button><button aria-pressed={locale==="en"} onClick={()=>setLocale("en")}>EN</button></div>
+     <div className="soc-toggle" aria-label="Appearance selector"><button title={t("Helles Design","Light mode")} aria-label="Light mode" aria-pressed={appearance==="light"} onClick={()=>setAppearance("light")}><Sun size={15}/></button><button title={t("Dunkles Design","Dark mode")} aria-label="Dark mode" aria-pressed={appearance==="dark"} onClick={()=>setAppearance("dark")}><Moon size={15}/></button></div>
+    </div>
+   </header>
+   <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-7 sm:py-8">{children}</main>
+  </div>
+  <Sentinel role={session.role}/>
+ </div>;
 }
