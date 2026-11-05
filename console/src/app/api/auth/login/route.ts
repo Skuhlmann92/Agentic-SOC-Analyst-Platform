@@ -1,3 +1,4 @@
+import {checkLoginThrottle} from "@/lib/auth-throttle";
 import { timingSafeEqual } from "node:crypto";
 import { LIVE_TENANT } from "@/lib/live-api";
 import { NextResponse } from "next/server";
@@ -27,6 +28,14 @@ export async function POST(request: Request) {
       sameSite: "lax", path: "/", maxAge: 60 * 60 * 4,
     });
     return response;
+  }
+  // Production administrator auth has an atomic server-side attempt limit.
+  if(process.env.NODE_ENV==="production" && body.operator==="admin"){
+    const throttle=await checkLoginThrottle(request,"admin");
+    if(!throttle.allowed)return NextResponse.json(
+      {error:{code:"rate_limited",message:"Too many login attempts or login protection unavailable."}},
+      {status:429,headers:{"Retry-After":String(throttle.retrySeconds),"Cache-Control":"no-store"}}
+    );
   }
   const adminName = process.env.SOC_ADMIN_USERNAME || "socadmin";
   const adminPassword = process.env.SOC_ADMIN_PASSWORD;
