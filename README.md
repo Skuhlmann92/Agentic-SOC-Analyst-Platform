@@ -1,3 +1,5 @@
+> **Hosted SOC console (community fork):** [soc.samuelkuhlmann.com](https://soc.samuelkuhlmann.com) runs on Vercel with Neon PostgreSQL. The public demo is read-only and synthetic. Private Wazuh/EDR alert ingestion and a private live analyst view are documented in [LIVE_WAZUH_EDR_SETUP.md](LIVE_WAZUH_EDR_SETUP.md). The original Python FastAPI/LangGraph services remain a separate backend and are not part of the Vercel-only deployment.
+
 <div align="center">
 
 # Agentic SOC Analyst Platform
