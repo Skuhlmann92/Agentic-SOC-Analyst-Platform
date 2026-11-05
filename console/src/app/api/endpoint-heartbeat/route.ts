@@ -13,7 +13,7 @@ function constantMatch(actual:string,expected:string|undefined){
  if(!expected||!actual)return false;const a=Buffer.from(actual),b=Buffer.from(expected);
  return a.length===b.length&&timingSafeEqual(a,b);
 }
-async function prepare(sql:ReturnType<typeof neon>){
+async function prepare(sql:ReturnType<typeof DB>){
  await sql.query(`CREATE TABLE IF NOT EXISTS soc_endpoint_heartbeats (
  tenant_id text NOT NULL,hostname text NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),
  payload jsonb NOT NULL,PRIMARY KEY(tenant_id,hostname))`);
