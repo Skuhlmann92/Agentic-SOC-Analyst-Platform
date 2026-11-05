@@ -11,7 +11,10 @@ export type SessionClaims = {
 };
 
 export function sessionSecret() {
-  return process.env.CONSOLE_SESSION_SECRET || "dev-console-session";
+  const configured=process.env.CONSOLE_SESSION_SECRET;
+  if(configured)return configured;
+  if(process.env.NODE_ENV==="production")throw new Error("CONSOLE_SESSION_SECRET is required in production");
+  return "dev-console-session";
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {
