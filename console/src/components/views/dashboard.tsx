@@ -20,7 +20,7 @@ function message(error: unknown) {
   return error instanceof ApiClientError ? error.message : "The dashboard could not be loaded.";
 }
 
-export function DashboardView() {
+export function DashboardView({ workspace="other" }: { workspace?: "demo" | "live" | "other" }) {
   const openAlerts = useQuery({
     queryKey: ["dashboard", "open-alerts"],
     queryFn: () => sdk.searchAlerts({ status: "new", limit: 100, sort: "event_time" }),
@@ -94,6 +94,17 @@ export function DashboardView() {
 
   return (
     <div>
+      {workspace==="live" ? (
+        <div className="mb-4 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm">
+          <strong>LIVE SOC · Wazuh / EDR telemetry</strong>
+          <p className="mt-1 text-muted-foreground">You are viewing real events ingested into your private Neon workspace. Security alerts are not confirmed incidents.</p>
+        </div>
+      ) : workspace==="demo" ? (
+        <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+          <strong>PUBLIC DEMO · Fictional sample data</strong>
+          <p className="mt-1 text-muted-foreground">The Raspberry Pi and live Wazuh events are not visible here. Sign out and use the private administrator password to enter the LIVE workspace.</p>
+        </div>
+      ) : null}
       <PageHeader
         title="Dashboard"
         detail="Counts come from the current tenant page, up to 100 rows. A plus means another page exists. Event facets are complete counts."
