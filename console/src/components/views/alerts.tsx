@@ -13,7 +13,7 @@ import { formatTime, label } from "@/lib/format";
 import { ApiClientError, sdk } from "@/lib/sdk/client";
 import type { FacetBucket } from "@/lib/sdk/types";
 
-const SOURCES = ["", "sigma_alert", "mock_edr_alert", "windows_event"];
+const SOURCES = ["", "wazuh", "edr", "sigma_alert", "mock_edr_alert", "windows_event"];
 const SEVERITIES = ["", "critical", "high", "medium", "low", "informational", "unknown"];
 const STATUSES = ["", "new", "in_review", "closed", "suppressed"];
 const SORTS = [
