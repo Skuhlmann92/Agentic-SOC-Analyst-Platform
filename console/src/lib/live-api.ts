@@ -1,3 +1,4 @@
+import { deriveLiveViews } from "@/lib/live-views";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
@@ -133,6 +134,7 @@ export async function liveApi(request:Request,path:string[]):Promise<Response> {
     "SELECT payload FROM soc_live_alerts WHERE tenant_id=$1 ORDER BY detected_at DESC LIMIT 5000",[LIVE_TENANT]
   );
   const alerts=resultRows(result).map(r=>r.payload as Row);
+  const {cases,investigations,entities}=deriveLiveViews(alerts);
   const url=new URL(request.url), q=url.searchParams, endpoint=path.join("/");
   const query=value(q.get("q")).toLowerCase();
   const filtered=alerts.filter(a=>{
@@ -163,9 +165,23 @@ export async function liveApi(request:Request,path:string[]):Promise<Response> {
     }))});
   if(endpoint==="api/v1/operations/dead-letters"||endpoint==="api/v1/operations/publications")
     return Response.json(page([],q));
-  if(endpoint==="api/v1/cases"||endpoint==="api/v1/investigations"||
-     endpoint==="api/v1/agent/runs"||endpoint==="api/v1/agent/drafts"||
-     endpoint==="api/v1/search/entities")return Response.json(page([],q));
+  if(endpoint==="api/v1/cases")return Response.json(page(cases.filter(item=>!q.get("case_status")||item.status===q.get("case_status")),q));
+  if(endpoint==="api/v1/investigations")return Response.json(page(investigations.filter(item=>!q.get("investigation_status")||item.status===q.get("investigation_status")),q));
+  if(endpoint==="api/v1/search/entities"){
+    const filteredEntities=entities.filter(item=>
+      (!q.get("type")||item.entity_type===q.get("type"))&&
+      (!q.get("q")||JSON.stringify(item).toLowerCase().includes((q.get("q")||"").toLowerCase()))
+    );
+    return Response.json(page(filteredEntities,q));
+  }
+  if(endpoint==="api/v1/agent/runs"||endpoint==="api/v1/agent/drafts")
+    return Response.json(page([],q));
+  const detailMatch=endpoint.match(/^api\\/v1\\/(cases|investigations|search\\/entities)\\/([a-f0-9-]{36})$/i);
+  if(detailMatch){
+    const collection=detailMatch[1]==="cases"?cases:detailMatch[1]==="investigations"?investigations:entities;
+    const item=collection.find(row=>row.id===detailMatch[2]);
+    return item?Response.json(item):Response.json({error:{code:"not_found",message:"Record not found"}},{status:404});
+  }
   const alertMatch=endpoint.match(/^api\/v1\/alerts\/([a-f0-9-]{36})$/i);
   if(alertMatch){const a=alerts.find(r=>r.id===alertMatch[1]);return a?Response.json(a):Response.json({error:{code:"not_found",message:"Alert not found"}},{status:404});}
   const eventMatch=endpoint.match(/^api\/v1\/events\/([a-f0-9-]{36})$/i);
