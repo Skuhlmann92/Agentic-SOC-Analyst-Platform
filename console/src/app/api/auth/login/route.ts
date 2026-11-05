@@ -46,7 +46,8 @@ export async function POST(request: Request) {
     });
     return response;
   }
-  if (process.env.NODE_ENV === "production" && process.env.ENABLE_LOCAL_OPERATORS !== "true") {
+  // Local sample accounts have known credentials: never permit them in production.
+  if (process.env.NODE_ENV === "production" || process.env.ENABLE_LOCAL_OPERATORS !== "true") {
     return NextResponse.json(
       { error: { code: "disabled", message: "Private SOC sign-in failed. Check your administrator password or use the demo." } },
       { status: 403 },
