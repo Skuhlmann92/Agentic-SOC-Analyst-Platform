@@ -176,10 +176,12 @@ export async function liveApi(request:Request,path:string[]):Promise<Response> {
   }
   if(endpoint==="api/v1/agent/runs"||endpoint==="api/v1/agent/drafts")
     return Response.json(page([],q));
-  const detailMatch=endpoint.match(/^api\\/v1\\/(cases|investigations|search\\/entities)\\/([a-f0-9-]{36})$/i);
-  if(detailMatch){
-    const collection=detailMatch[1]==="cases"?cases:detailMatch[1]==="investigations"?investigations:entities;
-    const item=collection.find(row=>row.id===detailMatch[2]);
+  const detailType=endpoint.startsWith("api/v1/cases/")?"cases":
+    endpoint.startsWith("api/v1/investigations/")?"investigations":
+    endpoint.startsWith("api/v1/search/entities/")?"entities":null;
+  if(detailType){
+    const collection=detailType==="cases"?cases:detailType==="investigations"?investigations:entities;
+    const item=collection.find(row=>row.id===endpoint.split("/").at(-1));
     return item?Response.json(item):Response.json({error:{code:"not_found",message:"Record not found"}},{status:404});
   }
   const alertMatch=endpoint.match(/^api\/v1\/alerts\/([a-f0-9-]{36})$/i);
