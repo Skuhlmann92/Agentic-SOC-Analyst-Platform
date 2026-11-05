@@ -94,6 +94,10 @@ export async function initLive(sql: NeonSql): Promise<void> {
     PRIMARY KEY (tenant_id,id)
   )`);
   await sql.query("CREATE INDEX IF NOT EXISTS soc_live_alerts_recent ON soc_live_alerts (tenant_id,detected_at DESC)");
+  await sql.query(`CREATE TABLE IF NOT EXISTS soc_live_audit (
+    id bigserial PRIMARY KEY, tenant_id text NOT NULL, alert_id uuid NOT NULL,
+    action text NOT NULL, actor text NOT NULL, recorded_at timestamptz NOT NULL DEFAULT NOW()
+  )`);
 }
 export async function ingestEvents(events: unknown[], source: string): Promise<{accepted:number;duplicates:number}> {
   const sql=sqlClient();
@@ -125,17 +129,39 @@ function bucket(rows:Row[],field:string) {
   }
   return [...values].map(([value,count])=>({value,count}));
 }
-export async function liveApi(request:Request,path:string[]):Promise<Response> {
-  if(request.method!=="GET")
-    return Response.json({error:{code:"read_only",message:"Live ingestion uses the authenticated /api/ingest endpoint."}},{status:405});
+export async function liveApi(request:Request,path:string[],actor="SOC Administrator"):Promise<Response> {
   const sql=sqlClient();
   await initLive(sql);
+  const endpoint=path.join("/");
+  const parts=endpoint.split("/");
+  if(request.method==="POST" && parts.length===6 && parts.slice(0,3).join("/")==="api/v1/alerts" && parts[5]==="status"){
+    const alertId=parts[4];
+    if(!/^[0-9a-f-]{36}$/i.test(alertId))
+      return Response.json({error:{code:"invalid_id",message:"Invalid alert UUID"}},{status:422});
+    let body:Record<string,unknown>;
+    try{const value=await request.json();body=value&&typeof value==="object"&&!Array.isArray(value)?value:{};}
+    catch{return Response.json({error:{code:"invalid_json",message:"Invalid JSON body"}},{status:400});}
+    const status=body.status;
+    if(!["new","in_review","closed","suppressed"].includes(String(status)))
+      return Response.json({error:{code:"invalid_status",message:"Unsupported alert status"}},{status:422});
+    const changed=await sql.query(
+      "UPDATE soc_live_alerts SET status=$3,payload=jsonb_set(payload,'{status}',to_jsonb($3::text),true) WHERE tenant_id=$1 AND id=$2 RETURNING payload",
+      [LIVE_TENANT,alertId,status]
+    );
+    const row=resultRows(changed)[0];
+    if(!row)return Response.json({error:{code:"not_found",message:"Alert not found"}},{status:404});
+    await sql.query("INSERT INTO soc_live_audit (tenant_id,alert_id,action,actor) VALUES ($1,$2,$3,$4)",
+      [LIVE_TENANT,alertId,"set_status:"+status,actor]);
+    return Response.json(row.payload);
+  }
+  if(request.method!=="GET")
+    return Response.json({error:{code:"method_not_allowed",message:"Unsupported private SOC operation"}},{status:405});
   const result=await sql.query(
     "SELECT payload FROM soc_live_alerts WHERE tenant_id=$1 ORDER BY detected_at DESC LIMIT 5000",[LIVE_TENANT]
   );
   const alerts=resultRows(result).map(r=>r.payload as Row);
   const {cases,investigations,entities}=deriveLiveViews(alerts);
-  const url=new URL(request.url), q=url.searchParams, endpoint=path.join("/");
+  const url=new URL(request.url), q=url.searchParams;
   const query=value(q.get("q")).toLowerCase();
   const filtered=alerts.filter(a=>{
     if(query&&!JSON.stringify(a).toLowerCase().includes(query))return false;
