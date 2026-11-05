@@ -35,19 +35,48 @@ export function deriveLiveViews(alerts:Row[]){
     entities.push({id:idFromKey("host:"+hostName),entity_type:"host",value:hostName,
       display_value:hostName,severity,first_seen:first,last_seen:last,
       event_count:hostAlerts.length,headline:hostAlerts[0]?.title||null});
-    const significant=hostAlerts.filter(a=>["high","critical"].includes(string(a.severity)));
-    if(significant.length===0)continue;
-    const caseId=idFromKey("case:"+hostName),investigationId=idFromKey("investigation:"+hostName);
-    cases.push({id:caseId,title:"Investigate "+hostName,
-      description:"Automatically grouped high/critical alerts observed on this endpoint.",
-      severity:worst(significant),status:"open",assignee:"SOC Analyst",external_ref:"AUTO-"+hostName,
-      opened_at:oldest(significant),closed_at:null,investigation_ids:[investigationId],finding_ids:[]});
-    investigations.push({id:investigationId,case_id:caseId,title:"Correlate detections on "+hostName,
-      status:"open",priority:worst(significant),hypothesis:
-      "Multiple security detections on the same endpoint may share a root cause.",
-      summary:"Automatically derived triage group. Review sources before making a determination.",
-      assignee:"SOC Analyst",opened_at:oldest(significant),closed_at:null,
-      alert_ids:significant.map(a=>a.id)});
+    // Correlate within bounded 60-minute UTC windows; a large recurring rule is
+    // not a single eternal incident. CIS SCA check titles are separate findings.
+    const groups=new Map<string,Row[]>();
+    for(const alert of hostAlerts){
+      const detected=Date.parse(string(alert.detected_at));
+      if(!Number.isFinite(detected))continue;
+      const hour=Math.floor(detected/3_600_000);
+      const rule=string(alert.rule_id)||string(alert.title)||"unknown";
+      const isSca=["19007","19008","19004"].includes(rule);
+      const suffix=isSca?":"+string(alert.title).toLowerCase().slice(0,180):"";
+      const key=hostName+"|"+rule+suffix+"|"+hour;
+      const list=groups.get(key)||[];list.push(alert);groups.set(key,list);
+    }
+    for(const [key,records] of groups){
+      const ordered=records.sort((a,b)=>string(a.detected_at).localeCompare(string(b.detected_at)));
+      const severityGroup=worst(records);
+      const isSignificant=["critical","high"].includes(severityGroup);
+      // Repeated low alerts are triage candidates, never confirmed attacks.
+      if(!isSignificant&&records.length<3)continue;
+      const caseId=idFromKey("correlated-case:"+key);
+      const investigationId=idFromKey("correlated-investigation:"+key);
+      const title=string(records[0].title)||"Security alert";
+      const rule=string(records[0].rule_id)||"unknown";
+      const sca=["19007","19008","19004"].includes(rule);
+      const reason=sca?"Related CIS Security Configuration Assessment observations":
+        "Repeated detections sharing endpoint, detection rule and one-hour time window";
+      const hypothesis=sca?"This configuration check may require security hardening; verify its current state before remediation.":
+        "Several detections might reflect a recurring source, legitimate activity or a common security event; analyst validation is required.";
+      cases.push({id:caseId,title:sca?"Configuration check: "+title:"Correlated: "+title,
+        description:reason+". Not a confirmed incident.",
+        severity:severityGroup,status:"open",assignee:"SOC Analyst",external_ref:"CORR-"+caseId.slice(0,8),
+        opened_at:oldest(records),closed_at:null,investigation_ids:[investigationId],finding_ids:[],
+        correlation:{method:"rule-host-time-window",window_minutes:60,rule_id:rule,
+          hostname:hostName,alert_count:records.length,evidence_alert_ids:records.slice(0,75).map(a=>a.id),
+          explanation:reason}};
+      investigations.push({id:investigationId,case_id:caseId,title:"Review "+title,
+        status:"open",priority:severityGroup,hypothesis,
+        summary:reason+". Evidence is linked; this is an automated rule-based correlation, not a Claude conclusion.",
+        assignee:"SOC Analyst",opened_at:oldest(records),closed_at:null,
+        alert_ids:records.slice(0,75).map(a=>a.id),
+        correlation:{method:"rule-host-time-window",window_minutes:60,hostname:hostName,rule_id:rule,alert_count:records.length}});
+    }
   }
   for(const [name,userAlerts] of userMap){
     entities.push({id:idFromKey("user:"+name),entity_type:"user",value:name,
@@ -55,5 +84,7 @@ export function deriveLiveViews(alerts:Row[]){
       last_seen:newest(userAlerts),event_count:userAlerts.length,
       headline:userAlerts[0]?.title||null});
   }
+  cases.sort((a,b)=>string(b.opened_at).localeCompare(string(a.opened_at)));
+  investigations.sort((a,b)=>string(b.opened_at).localeCompare(string(a.opened_at)));
   return {cases,investigations,entities};
 }
