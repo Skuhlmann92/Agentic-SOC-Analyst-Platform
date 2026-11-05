@@ -14,6 +14,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
+  async function openDemo() {
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ demo: true }),
+      });
+      if (!response.ok) throw new Error("Demo sign-in failed.");
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Demo sign-in failed. Please try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setPending(true);
@@ -43,6 +61,12 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">Sign in to a tenant workspace.</p>
           </div>
         </div>
+        <div className="mb-5 rounded-lg border border-accent/40 bg-accent/5 p-4">
+          <p className="text-sm font-medium">Public SOC demo</p>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">Explore fictional security alerts and investigations. No password or tenant ID required.</p>
+          <Button type="button" className="w-full" disabled={pending} onClick={openDemo}>Open demo dashboard</Button>
+        </div>
+        <p className="mb-3 text-xs uppercase text-muted-foreground">Operator sign-in (local development only)</p>
         <label className="mb-3 block text-sm">
           <span className="mb-1 block text-muted-foreground">Operator</span>
           <select className="field" value={operator} onChange={(event) => setOperator(event.target.value)}>
@@ -69,8 +93,7 @@ export default function LoginPage() {
           {pending ? "Signing in" : "Enter console"}
         </Button>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          Local operators: analyst / analyst-local, reviewer / reviewer-local, admin / admin-local. The tenant must
-          already exist in the platform.
+          Public demo access is read-only. Local operator accounts are disabled in production.
         </p>
       </form>
     </main>
