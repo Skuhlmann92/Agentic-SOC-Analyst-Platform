@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [operator, setOperator] = useState("analyst");
+  const operator = "admin";
   const [password, setPassword] = useState("");
-  const [tenantId, setTenantId] = useState("");
+
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ operator, password, tenantId }),
+      body: JSON.stringify({ operator, password }),
     });
     setPending(false);
     if (!response.ok) {
@@ -67,33 +67,17 @@ export default function LoginPage() {
           <Button type="button" className="w-full" disabled={pending} onClick={openDemo}>Open demo dashboard</Button>
         </div>
         <p className="mb-3 text-xs uppercase text-muted-foreground">Private SOC administrator sign-in</p>
-        <label className="mb-3 block text-sm">
-          <span className="mb-1 block text-muted-foreground">Operator</span>
-          <select className="field" value={operator} onChange={(event) => setOperator(event.target.value)}>
-            <option value="analyst">Analyst</option>
-            <option value="reviewer">Reviewer</option>
-            <option value="admin">Administrator</option>
-          </select>
-        </label>
+        <div className="field mb-3 flex items-center justify-between text-sm"><span>SOC Administrator</span><span className="text-xs text-muted-foreground">Private workspace</span></div>
         <label className="mb-3 block text-sm">
           <span className="mb-1 block text-muted-foreground">Password</span>
           <input className="field" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </label>
-        <label className="mb-4 block text-sm">
-          <span className="mb-1 block text-muted-foreground">Tenant</span>
-          <input
-            className="field font-mono"
-            value={tenantId}
-            placeholder="Optional for private admin (assigned automatically)"
-            onChange={(event) => setTenantId(event.target.value)}
-          />
         </label>
         {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
         <Button className="w-full" disabled={pending} type="submit">
           {pending ? "Signing in" : "Enter console"}
         </Button>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          For live Wazuh/EDR data, choose Administrator and enter your private SOC password. Tenant ID is assigned automatically. Demo access is read-only.
+          Enter the private SOC administrator password configured in Vercel. No tenant ID is needed. The public demo remains read-only.
         </p>
       </form>
     </main>
