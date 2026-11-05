@@ -1,3 +1,28 @@
+# Commercial Readiness — P0/P1/P2
+
+Aktuelle technische Bestandsaufnahme und Prüfergebnisse: [COMMERCIAL_READINESS_AUDIT.md](./COMMERCIAL_READINESS_AUDIT.md).
+
+## P0 — Sicherheit / Datenintegrität / Mandantentrennung
+- [x] Additive Neon-Datenmodelle für Organisation, Mitglieder, Connectoren, Agent-Zuordnung, Audit, Tarife (149/349/699 EUR) und inaktive Subscriptions; bestehende Records unberührt.
+- [x] Live/Demo-API-Grenze im Code fail-closed für unbekannte Mandanten; private Live-API prüft aktive Org-Mitgliedschaft. Session-Secret und Test-Account-Absicherung, Login-Throttle, API-Origin-Prüfung, Browser-Sicherheitsheader.
+- [x] Automatisierte Rollen-/Tenant-Grenztests und Next-Produktionsbuild als CI-Workflow.
+- [ ] **Release-Blocker:** Vercel API HTTP 402 (kostenloses Tageskontingent >100 Deployments). Neuesten P0-Commit nach Freigabe des Kontingents deployen; URL/API/Release-SHA verifizieren.
+- [ ] **Pflicht vor Kundenbetrieb:** PostgreSQL Row-Level Security + Least-Privilege DB-Rollen, vollständige Tenant-ID/Connector-Token-Zuordnung, echte Benutzer/Mitgliedschaften/Einladungen, Datenbank-Migrationstests und E2E-Tests.
+- [ ] Next.js package-lock reparieren; CI von temporärem npm install zurück auf reproduzierbares npm ci.
+- [ ] End-to-End Claude/Wazuh-Syscollector-Sicherheit, Datenvollständigkeit, Secrets/Dependency Scanning, Backup- und Restore-Tests, Logging/Retention/DSGVO.
+
+## P1 — Kommerzielle Funktionen
+- [x] Tarifkatalog und Subscription-Datenmodell ohne Zahlungsaktivierung angelegt.
+- [ ] Serverseitige Endpoint- und KI-Kontingente, Pilot-/Testlizenzen, Stripe-Testadapter und Webhook-Verifikation; **keine Zahlungen ohne Freigabe**.
+- [ ] Sichere Organisations-Einladung und geführtes Kunden-Onboarding.
+- [ ] Messbare Executive Reports, wöchentliche/monatliche Zeitpläne, gebrandeter PDF-Export.
+- [ ] Commercial Dashboard (Organisation, Billing, Assets, Vulnerabilities, Remediation, Reports).
+
+## P2 — Automatisierung / Skalierung
+- [ ] White-Label, Verteilungs- und Datenhaltungsstrategie, Warteschlangen/SLA, qualitätsgesicherte Korrelation, sichere Remote-Remediation nach gesonderter Freigabe.
+
+---
+
 # Agentic SOC Platform – verbindliche nächste Arbeitsschritte
 
 Stand: 2026-11-05. Nutzerauftrag: Nach den jetzt umzusetzenden Schritten auch die übrigen Verbesserungen umsetzen. Nicht als abgeschlossen markieren, bevor umgesetzt und geprüft.
