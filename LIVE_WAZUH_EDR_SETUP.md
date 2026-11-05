@@ -1,5 +1,23 @@
 # Live Wazuh / EDR integration (Vercel + Neon)
 
+## Raspberry Pi setup and secure SSH
+
+**SSH access:** The project does not contain a remote SSH execution capability. Use SSH from a trusted computer or a Cloudflare Access-protected tunnel. Never open port 22 to the internet for this deployment. Keep SSH private keys on the client; do not paste keys into ChatGPT or commits.
+
+**Determine Wazuh role:** Run `bash scripts/rpi-wazuh-check.sh` on the Pi and inspect whether `wazuh-agent` or `wazuh-manager` is active. Wazuh forwarding has to run on the **Manager**, not a standalone agent. A Pi with only the Wazuh Agent needs a reachable Manager elsewhere.
+
+**Agent installation:** For Raspberry Pi OS (arm64/armhf), after verifying compatibility with the installed Wazuh Manager, run `sudo WAZUH_MANAGER='<manager-address>' WAZUH_AGENT_NAME='rpi5' bash scripts/install-rpi-wazuh-agent.sh`. If the agent is already installed, the script refuses to overwrite it.
+
+**Manager installation:** From the GitHub checkout on the Manager, run `sudo bash scripts/setup-wazuh-forwarder.sh`. It prompts for the API token securely, backs up `ossec.conf`, adds the custom integration and restarts the Manager. Inspect the generated configuration before using this in a production environment.
+
+**Flow:** Raspberry Pi agent → Wazuh Manager → custom-soc-forwarder → HTTPS `/api/ingest` (Bearer token) → Neon `soc_live_alerts` → Private SOC Dashboard. The public demo uses a separate tenant and never includes real events.
+
+**Security:** Run the Wazuh Manager on a separate host if possible; only allow the required agent-to-manager connections, use Cloudflare Access or a VPN for SSH, and rotate the admin password and ingestion token after initial setup.
+
+---
+
+
+
 The public SOC demo and your private live telemetry are **separate**:
 
 - **Public demo**: "Open demo dashboard" -> synthetic data only.
