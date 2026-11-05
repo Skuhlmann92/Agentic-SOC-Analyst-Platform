@@ -1,5 +1,5 @@
-import {CorrelationAiPanel} from "@/components/views/correlation-ai-panel";
 "use client";
+import {CorrelationAiPanel} from "@/components/views/correlation-ai-panel";
 
 import { useQuery, useQueries } from "@tanstack/react-query";
 import Link from "next/link";
