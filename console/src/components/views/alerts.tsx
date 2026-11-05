@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { usePreferences } from "@/lib/preferences";
@@ -25,10 +25,17 @@ const SORTS = [
 
 export function AlertsView() {
   const router = useRouter();
+  const searchParams=useSearchParams();
   const {t} = usePreferences();
   const [q, setQ] = useState("");
-  const [severity, setSeverity] = useState("");
-  const [source, setSource] = useState("");
+  const [severity, setSeverity] = useState(searchParams.get("severity")||"");
+  const [host, setHost] = useState(searchParams.get("host")||"");
+  const [ruleId, setRuleId] = useState(searchParams.get("rule_id")||"");
+  const [ruleLevel, setRuleLevel] = useState(searchParams.get("rule_level")||"");
+  const [technique, setTechnique] = useState(searchParams.get("technique_id")||"");
+  const [from,setFrom]=useState(searchParams.get("from")||"");
+  const [to,setTo]=useState(searchParams.get("to")||"");
+  const [source, setSource] = useState(searchParams.get("source")||"");
   const [status, setStatus] = useState("");
   const [eventType, setEventType] = useState("");
   const [sort, setSort] = useState("event_time");
@@ -36,8 +43,8 @@ export function AlertsView() {
   const cursor = cursors.at(-1);
 
   const params = useMemo(
-    () => ({ q, severity, source, status, event_type: eventType, sort, limit: 25, cursor }),
-    [q, severity, source, status, eventType, sort, cursor],
+    () => ({ q, severity, source, status, host,rule_id:ruleId,rule_level:ruleLevel,technique_id:technique,from,to,event_type: eventType, sort, limit: 25, cursor }),
+    [q, severity, source, status, host,ruleId,ruleLevel,technique,from,to,eventType, sort, cursor],
   );
   const alerts = useQuery({ queryKey: ["alerts", params], queryFn: () => sdk.searchAlerts(params) });
   const facets = useQuery({
@@ -45,6 +52,19 @@ export function AlertsView() {
     queryFn: () => sdk.facets({ q, severity, source, event_type: eventType }),
   });
 
+  useEffect(()=>{
+    const params=new URLSearchParams();
+    for(const [k,v] of Object.entries({q,severity,source,status,host,rule_id:ruleId,rule_level:ruleLevel,technique_id:technique,from,to,event_type:eventType})){
+      if(v)params.set(k,v);
+    }
+    const query=params.toString();
+    const target=window.location.pathname+(query?"?"+query:"");
+    if(window.location.pathname+window.location.search!==target)window.history.replaceState(null,"",target);
+  },[q,severity,source,status,host,ruleId,ruleLevel,technique,from,to,eventType]);
+  function resetAll(){
+    setQ("");setSeverity("");setSource("");setStatus("");setHost("");
+    setRuleId("");setRuleLevel("");setTechnique("");setFrom("");setTo("");setEventType("");setCursors([]);
+  }
   function resetPage() {
     setCursors([]);
   }
@@ -66,12 +86,25 @@ export function AlertsView() {
           ))}
         </select>
       </div>
+      <div className="panel mb-4 rounded-xl p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xs font-bold uppercase tracking-wide">{t("Erweiterter Drill-down","Advanced drill-down")}</h2>
+          <button type="button" onClick={resetAll} className="text-xs font-semibold text-accent">{t("Alle Filter zurücksetzen","Clear all filters")}</button>
+        </div>
+        {from||to?<p className="mb-3 text-xs text-muted-foreground">{t("Zeitbereich (Berlin)","Selected time window (Berlin)")}: {from?formatTime(from):"—"} – {to?formatTime(to):"—"} <button className="ml-3 font-semibold text-accent" onClick={()=>{setFrom("");setTo("");resetPage();}}>{t("Zeitfilter entfernen","Remove time filter")}</button></p>:null}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <select className="field" value={host} onChange={e=>{setHost(e.target.value);resetPage();}} aria-label="Host"><option value="">{t("Alle Endgeräte","All hosts")}</option>{(facets.data?.host||[]).map(h=><option key={h.value} value={h.value}>{h.value}</option>)}</select>
+          <input className="field" value={ruleId} placeholder={t("Wazuh-Regel-ID","Wazuh rule ID")} onChange={e=>{setRuleId(e.target.value);resetPage();}}/>
+          <select className="field" value={ruleLevel} onChange={e=>{setRuleLevel(e.target.value);resetPage();}} aria-label="Wazuh rule level"><option value="">{t("Alle Regel-Level","All rule levels")}</option>{Array.from({length:16},(_,level)=><option key={level} value={String(level)}>Level {level}</option>)}</select>
+          <input className="field" value={technique} placeholder="MITRE ATT&CK ID (T1059)" onChange={e=>{setTechnique(e.target.value);resetPage();}}/>
+        </div>
+      </div>
       <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-4">
           <FacetGroup title={t("Priorität","Severity")} buckets={facets.data?.severity} active={severity} onPick={(value) => { setSeverity(value === severity ? "" : value); resetPage(); }} />
           <FacetGroup title={t("Quelle","Source")} buckets={facets.data?.source} active={source} onPick={(value) => { setSource(value === source ? "" : value); resetPage(); }} />
           <FacetGroup title={t("Ereignistyp","Event type")} buckets={facets.data?.event_type} active={eventType} onPick={(value) => { setEventType(value === eventType ? "" : value); resetPage(); }} />
-          <FacetGroup title={t("Endgerät","Host")} buckets={facets.data?.host} active="" onPick={(value) => router.push(`/entities?type=host&q=${encodeURIComponent(value)}`)} />
+          <FacetGroup title={t("Endgerät","Host")} buckets={facets.data?.host} active={host} onPick={(value) => {setHost(host===value?"":value);resetPage();}} />
           <FacetGroup title={t("Nutzer","User")} buckets={facets.data?.user} active="" onPick={(value) => router.push(`/entities?type=user&q=${encodeURIComponent(value)}`)} />
         </aside>
         <section>
