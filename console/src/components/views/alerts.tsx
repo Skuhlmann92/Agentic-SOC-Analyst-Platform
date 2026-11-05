@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
+import { usePreferences } from "@/lib/preferences";
 import { Pager } from "@/components/pager";
 import { StatusBadge } from "@/components/severity";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
@@ -24,6 +25,7 @@ const SORTS = [
 
 export function AlertsView() {
   const router = useRouter();
+  const {t} = usePreferences();
   const [q, setQ] = useState("");
   const [severity, setSeverity] = useState("");
   const [source, setSource] = useState("");
@@ -50,46 +52,46 @@ export function AlertsView() {
   return (
     <div>
       <PageHeader
-        title="Alert explorer"
-        detail="Search detections in this tenant. Facets count the event corpus and omit their own filter. Sorting and pages stay on the alert index."
+        title={t("Sicherheitsmeldungen","Alert explorer")}
+        detail={t("Erkennungen nach Schweregrad, Quelle und Status durchsuchen. Filter links verfeinern die Ergebnisse.","Search detections by severity, source and status. Use facets to refine the results.")}
       />
       <div className="mb-4 grid gap-2 md:grid-cols-6">
-        <input className="field md:col-span-2" placeholder="Search alerts" value={q} onChange={(event) => { setQ(event.target.value); resetPage(); }} />
-        <Select value={severity} onChange={(value) => { setSeverity(value); resetPage(); }} options={SEVERITIES} placeholder="Severity" />
-        <Select value={source} onChange={(value) => { setSource(value); resetPage(); }} options={SOURCES} placeholder="Source" />
-        <Select value={status} onChange={(value) => { setStatus(value); resetPage(); }} options={STATUSES} placeholder="Status" />
+        <input className="field md:col-span-2" placeholder={t("Meldungen durchsuchen","Search alerts")} value={q} onChange={(event) => { setQ(event.target.value); resetPage(); }} />
+        <Select value={severity} onChange={(value) => { setSeverity(value); resetPage(); }} options={SEVERITIES} placeholder={t("Priorität","Severity")} />
+        <Select value={source} onChange={(value) => { setSource(value); resetPage(); }} options={SOURCES} placeholder={t("Quelle","Source")} />
+        <Select value={status} onChange={(value) => { setStatus(value); resetPage(); }} options={STATUSES} placeholder={t("Status","Status")} />
         <select className="field" value={sort} onChange={(event) => { setSort(event.target.value); resetPage(); }}>
           {SORTS.map(([value, name]) => (
-            <option key={value} value={value}>{name}</option>
+            <option key={value} value={value}>{value==="event_time"?t("Erkennungszeit","Detection time"):value==="severity"?t("Priorität","Severity"):t("Erstellt","Created time")}</option>
           ))}
         </select>
       </div>
       <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-4">
-          <FacetGroup title="Severity" buckets={facets.data?.severity} active={severity} onPick={(value) => { setSeverity(value === severity ? "" : value); resetPage(); }} />
-          <FacetGroup title="Source" buckets={facets.data?.source} active={source} onPick={(value) => { setSource(value === source ? "" : value); resetPage(); }} />
-          <FacetGroup title="Event type" buckets={facets.data?.event_type} active={eventType} onPick={(value) => { setEventType(value === eventType ? "" : value); resetPage(); }} />
-          <FacetGroup title="Host" buckets={facets.data?.host} active="" onPick={(value) => router.push(`/entities?type=host&q=${encodeURIComponent(value)}`)} />
-          <FacetGroup title="User" buckets={facets.data?.user} active="" onPick={(value) => router.push(`/entities?type=user&q=${encodeURIComponent(value)}`)} />
+          <FacetGroup title={t("Priorität","Severity")} buckets={facets.data?.severity} active={severity} onPick={(value) => { setSeverity(value === severity ? "" : value); resetPage(); }} />
+          <FacetGroup title={t("Quelle","Source")} buckets={facets.data?.source} active={source} onPick={(value) => { setSource(value === source ? "" : value); resetPage(); }} />
+          <FacetGroup title={t("Ereignistyp","Event type")} buckets={facets.data?.event_type} active={eventType} onPick={(value) => { setEventType(value === eventType ? "" : value); resetPage(); }} />
+          <FacetGroup title={t("Endgerät","Host")} buckets={facets.data?.host} active="" onPick={(value) => router.push(`/entities?type=host&q=${encodeURIComponent(value)}`)} />
+          <FacetGroup title={t("Nutzer","User")} buckets={facets.data?.user} active="" onPick={(value) => router.push(`/entities?type=user&q=${encodeURIComponent(value)}`)} />
         </aside>
         <section>
-          {alerts.isLoading ? <LoadingBlock label="Loading alerts" /> : null}
+          {alerts.isLoading ? <LoadingBlock label={t("Lade Meldungen","Loading alerts")} /> : null}
           {alerts.isError ? (
             <ErrorState message={alerts.error instanceof ApiClientError ? alerts.error.message : "Alerts could not be loaded."} onRetry={() => alerts.refetch()} />
           ) : null}
           {alerts.data && alerts.data.data.length === 0 ? (
-            <EmptyState title="No alerts" body="No detections match this search. Clear severity, status, source, or the search text. Facets count the event corpus and leave out their own filter." />
+            <EmptyState title={t("Keine Meldungen","No alerts")} body={t("Keine Erkennungen entsprechen den Filtern. Bitte Suche oder Auswahl zurücksetzen.","No detections match the current filters. Clear search or selections.")} />
           ) : null}
           {alerts.data && alerts.data.data.length > 0 ? (
             <div className="panel overflow-hidden rounded-lg">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Alert</th>
-                    <th>Severity</th>
-                    <th>Status</th>
-                    <th>Host</th>
-                    <th>Detected</th>
+                    <th>{t("Meldung","Alert")}</th>
+                    <th>{t("Priorität","Severity")}</th>
+                    <th>{t("Status","Status")}</th>
+                    <th>{t("Endgerät","Host")}</th>
+                    <th>{t("Erkannt","Detected")}</th>
                   </tr>
                 </thead>
                 <tbody>
