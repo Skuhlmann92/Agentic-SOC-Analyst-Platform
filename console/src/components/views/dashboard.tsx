@@ -1,9 +1,10 @@
 "use client";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
+import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {Activity,ArrowRight,Bell,BookOpen,Briefcase,CheckCircle2,Clock3,Monitor,RefreshCcw,ShieldAlert,ShieldCheck,Sparkles,Users} from "lucide-react";
-import {Area,AreaChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
+import {Area,AreaChart,Brush,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {EmptyState,ErrorState,LoadingBlock} from "@/components/states";
 import {StatusBadge} from "@/components/severity";
 import {countLabel,formatTime} from "@/lib/format";
@@ -16,7 +17,17 @@ const tooltip={contentStyle:{background:"var(--surface-elevated)",border:"1px so
 export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"other"}){
  const {t,locale}=usePreferences();
  const client=useQueryClient();
+ const router=useRouter();
  const [range,setRange]=useState<TimelineRange>("24h");
+ const [selection,setSelection]=useState<{startIndex:number;endIndex:number}|null>(null);
+ function openTimelineAlerts(start:number,end:number){
+  const values=timeline.data?.data||[];
+  const first=values[Math.max(0,Math.min(start,end))],last=values[Math.max(start,end)];
+  if(!first||!last)return;
+  const from=new Date(first.timestamp).toISOString();
+  const to=new Date(new Date(last.timestamp).getTime()+(timeline.data?.step_minutes||1)*60000).toISOString();
+  router.push(`/alerts?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+ }
  const alerts=useQuery({queryKey:["dashboard","recent"],queryFn:()=>sdk.searchAlerts({limit:100,sort:"event_time"}),refetchInterval:60000});
  const timeline=useQuery({queryKey:["dashboard","timeline",range],queryFn:()=>sdk.timeline(range),refetchInterval:60000});
  const facets=useQuery({queryKey:["dashboard","facets"],queryFn:()=>sdk.facets(),refetchInterval:60000});
@@ -67,7 +78,7 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
    <div className="panel rounded-2xl p-5 sm:p-6">
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
      <div><h3 className="text-sm font-bold">{t("Erkennungen im Zeitverlauf","Detection activity")}</h3><p className="mt-1 text-xs text-muted-foreground">{t("Vollständige Datenbankzählung · Europe/Berlin · automatische Aktualisierung alle 60 s","Complete database aggregation · Europe/Berlin · refresh every 60s")}</p></div>
-     <div className="soc-toggle">{(["1h","6h","24h","7d"] as const).map(x=><button key={x} aria-pressed={range===x} onClick={()=>setRange(x)}>{x}</button>)}</div>
+     <div className="soc-toggle">{(["1h","6h","24h","7d"] as const).map(x=><button key={x} aria-pressed={range===x} onClick={()=>{setRange(x);setSelection(null);}}>{x}</button>)}</div>
     </div>
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
      <span className="text-xs text-muted-foreground">{t("Auflösung","Resolution")}: <strong className="text-foreground">{timeline.data?.step_minutes===1?t("1 Minute","1 minute"):timeline.data?.step_minutes===60?t("1 Stunde","1 hour"):`${timeline.data?.step_minutes||0} ${t("Minuten","minutes")}`}</strong></span>
@@ -77,6 +88,7 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
      <CartesianGrid vertical={false} strokeDasharray="3 5"/>
      <XAxis dataKey="timestamp" fontSize={11} tickLine={false} axisLine={false} minTickGap={20} tickFormatter={(v:string)=>new Intl.DateTimeFormat(locale==="de"?"de-DE":"en-GB",{timeZone:"Europe/Berlin",hour:"2-digit",minute:"2-digit",...(range==="7d"?{day:"2-digit",month:"2-digit"}:{})}).format(new Date(v))}/>
      <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false}/>
+     <Brush dataKey="timestamp" height={20} travellerWidth={8} stroke="#21b7c2" tickFormatter={(value:string)=>new Intl.DateTimeFormat(locale==="de"?"de-DE":"en-GB",{timeZone:"Europe/Berlin",hour:"2-digit",minute:"2-digit"}).format(new Date(value))} onChange={(next)=>{if(typeof next.startIndex==="number"&&typeof next.endIndex==="number")setSelection({startIndex:next.startIndex,endIndex:next.endIndex});}} />
      <Tooltip {...tooltip} labelFormatter={(v)=>formatTime(String(v))}/>
      <Area type="monotone" dataKey="critical" name="Critical" stackId="alerts" stroke={COLOR.critical} fill={COLOR.critical} fillOpacity={.8} dot={false}/>
      <Area type="monotone" dataKey="high" name="High" stackId="alerts" stroke={COLOR.high} fill={COLOR.high} fillOpacity={.72} dot={false}/>
@@ -85,6 +97,7 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
      <Area type="monotone" dataKey="informational" name="Info" stackId="alerts" stroke={COLOR.informational} fill={COLOR.informational} fillOpacity={.65} dot={false}/>
      <Area type="monotone" dataKey="unknown" name="Unknown" stackId="alerts" stroke={COLOR.unknown} fill={COLOR.unknown} fillOpacity={.55} dot={false}/>
     </AreaChart></ResponsiveContainer></div>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-muted-foreground">{t("Zeitraum unten im Diagramm markieren. Danach verknüpfte Alerts untersuchen.","Select a time window using the brush below, then inspect related alerts.")}</span><button type="button" className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent" onClick={()=>openTimelineAlerts(selection?.startIndex??0,selection?.endIndex??(timeline.data?.data.length||1)-1)}>{t("Alerts dieses Zeitraums anzeigen","Inspect alerts in range")} <ArrowRight className="ml-1 inline h-3 w-3"/></button></div>
     <p className="mt-3 text-[11px] text-muted-foreground">{t("Lücken mit null Ereignissen sind enthalten. Jeder Datenpunkt zeigt den Beginn des Intervalls in MEZ/MESZ.","Zero-event buckets are included. Each point shows the start of the interval in CET/CEST.")}</p>
    </div>
    <div className="panel rounded-2xl p-5 sm:p-6">
