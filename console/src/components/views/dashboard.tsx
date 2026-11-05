@@ -6,7 +6,7 @@ import {Activity,ArrowRight,Bell,BookOpen,Briefcase,CheckCircle2,Clock3,Monitor,
 import {Area,AreaChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {EmptyState,ErrorState,LoadingBlock} from "@/components/states";
 import {StatusBadge} from "@/components/severity";
-import {countLabel,formatTime} from "@/lib/format";
+import {countLabel,formatTime,dayKey} from "@/lib/format";
 import {ApiClientError,sdk} from "@/lib/sdk/client";
 import {usePreferences} from "@/lib/preferences";
 
@@ -36,8 +36,8 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
  const newest=alerts.data?.data[0]?.detected_at;
  const daily=new Map<string,number>();
  const countDays=range==="24h"?1:range==="7d"?7:14;
- for(let i=countDays-1;i>=0;i--){const d=new Date(now-i*86400000).toISOString().slice(0,10);daily.set(d,0);}
- for(const a of recent){const day=a.detected_at.slice(0,10);if(daily.has(day))daily.set(day,(daily.get(day)||0)+1);}
+ for(let i=countDays-1;i>=0;i--){const d=dayKey(new Date(now-i*86400000).toISOString());daily.set(d,0);}
+ for(const a of recent){const day=dayKey(a.detected_at);if(daily.has(day))daily.set(day,(daily.get(day)||0)+1);}
  const trend=[...daily].map(([day,count])=>({day:day.slice(5),count}));
  const kpis=[
  {title:t("Sicherheitsmeldungen","Security alerts"),number:total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
