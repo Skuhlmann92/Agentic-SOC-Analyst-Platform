@@ -2,25 +2,26 @@ import type { Role } from "@/lib/session-token";
 
 export type Operator = {
   id: string;
-  password: string;
   role: Role;
   name: string;
 };
 
 export const OPERATORS: Operator[] = [
-  { id: "analyst", password: "analyst-local", role: "analyst", name: "Analyst" },
-  { id: "reviewer", password: "reviewer-local", role: "reviewer", name: "Reviewer" },
-  { id: "admin", password: "admin-local", role: "admin", name: "Administrator" },
+  { id: "analyst", role: "analyst", name: "Analyst" },
+  { id: "reviewer", role: "reviewer", name: "Reviewer" },
+  { id: "admin", role: "admin", name: "Administrator" },
 ];
 
 export function findOperator(id: string, password: string) {
   const operator = OPERATORS.find((item) => item.id === id);
-  if (!operator || operator.password.length !== password.length) return null;
-  let diff = 0;
-  for (let index = 0; index < password.length; index += 1) {
-    diff |= operator.password.charCodeAt(index) ^ password.charCodeAt(index);
-  }
-  return diff === 0 ? operator : null;
+  if (!operator || process.env.NODE_ENV==="production" || process.env.ENABLE_LOCAL_OPERATORS!=="true")
+    return null;
+  const expected=id==="analyst"?process.env.LOCAL_ANALYST_PASSWORD:
+    id==="reviewer"?process.env.LOCAL_REVIEWER_PASSWORD:process.env.LOCAL_ADMIN_PASSWORD;
+  if(!expected || expected.length!==password.length)return null;
+  let diff=0;
+  for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^password.charCodeAt(i);
+  return diff===0?operator:null;
 }
 
 export function canReview(role: Role) {
