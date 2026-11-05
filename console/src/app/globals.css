@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root,html[data-theme="dark"] {
+ --font-sans: "Segoe UI", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+ --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, ui-monospace, monospace;
  color-scheme:dark;
  --background:222 46% 6%;
  --foreground:215 32% 94%;
