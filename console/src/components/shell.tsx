@@ -15,6 +15,7 @@ const NAV=[
  {href:"/security-posture",de:"Sicherheitsbewertung",en:"Security posture",icon:ScanSearch,group:"monitor",admin:false,review:false},
  {href:"/entities",de:"Endgeräte & Nutzer",en:"Entities & hosts",icon:Network,group:"monitor",admin:false,review:false},
  {href:"/endpoints",de:"Live-Endgeräte",en:"Endpoint monitoring",icon:ShieldCheck,group:"monitor",admin:false,review:false},
+ {href:"/inventory",de:"Software & Inventar",en:"Software inventory",icon:Network,group:"monitor",admin:false,review:false},
  {href:"/cases",de:"Vorfälle",en:"Cases",icon:Briefcase,group:"response",admin:false,review:false},
  {href:"/investigations",de:"Untersuchungen",en:"Investigations",icon:Activity,group:"response",admin:false,review:false},
  {href:"/agent-workspace",de:"KI-Agent & Skripte",en:"AI workspace",icon:Bot,group:"response",admin:false,review:false},
