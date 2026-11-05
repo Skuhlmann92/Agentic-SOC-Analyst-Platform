@@ -1,0 +1,31 @@
+name: SOC security and build
+on:
+  push:
+    paths:
+      - 'console/**'
+      - '.github/workflows/console-security-ci.yml'
+  pull_request:
+    paths:
+      - 'console/**'
+      - '.github/workflows/console-security-ci.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: console/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+        working-directory: console
+      - name: Tenant isolation and RBAC tests
+        run: node --experimental-strip-types --test tests/tenant-policy.test.mjs
+        working-directory: console
+      - name: Production build
+        run: npm run build
+        working-directory: console
