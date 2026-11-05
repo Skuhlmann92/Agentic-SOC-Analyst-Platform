@@ -8,7 +8,7 @@ type Row=Record<string,unknown>;
 const asRows=(x:unknown):Row[]=>Array.isArray(x)?x as Row[]:[];
 const s=(x:unknown)=>typeof x==="string"?x:"";
 const isUuid=(x:string)=>/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(x);
-const MODEL=process.env.ANTHROPIC_MODEL||"claude-sonnet-4-5-20250929";
+const MODEL=process.env.ANTHROPIC_MODEL||"claude-sonnet-5-5";
 function client(){const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;if(!url)throw Error("DB unavailable");return neon(url);}
 async function admin(){const user=await openSession((await cookies()).get(SESSION_COOKIE)?.value);return user?.role==="admin"&&user.tenantId===LIVE_TENANT&&user.sub===(process.env.SOC_ADMIN_USERNAME||"socadmin");}
 async function init(){
