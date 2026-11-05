@@ -74,8 +74,19 @@ export async function POST(request:Request){
  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),32000);
  let generated:Row,model=MODEL;
  try{
-  const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:ctl.signal,cache:"no-store",headers:{"x-api-key":process.env.ANTHROPIC_API_KEY!,"anthropic-version":"2023-06-01","content-type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:2600,temperature:0,system:instructions,messages:[{role:"user",content:JSON.stringify({os:"Windows 11 Enterprise",hostname,mode,scope:allLow?"low severity remediation":"read only diagnosis",alerts:context})}],output_config:{format:{type:"json_schema",schema}}})});
-  if(!response.ok)return fail("claude_error",response.status===401?"Claude API key invalid":response.status===429?"Claude rate limit":("Claude API HTTP "+response.status),502);
+  const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:ctl.signal,cache:"no-store",headers:{"x-api-key":process.env.ANTHROPIC_API_KEY!,"anthropic-version":"2023-06-01","content-type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:4096,system:instructions,messages:[{role:"user",content:JSON.stringify({os:"Windows 11 Enterprise",hostname,mode,scope:allLow?"low severity remediation":"read only diagnosis",alerts:context})}],output_config:{format:{type:"json_schema",schema}}})});
+  if(!response.ok){
+   let detail="";
+   try {
+    const responseBody=await response.json() as {error?:{message?:string,type?:string}};
+    detail=String(responseBody.error?.message||"").slice(0,320).replace(/[\\r\\n]/g," ");
+   }catch{}
+   const message=response.status===401?"Claude API-Schlüssel nicht autorisiert"
+     :response.status===429?"Claude API-Ratenlimit erreicht"
+     :response.status===400?"Ungültige Claude-Anfrage"+(detail?": "+detail:"")
+     :"Claude API HTTP "+response.status+(detail?": "+detail:"");
+   return fail("claude_error",message,502);
+  }
   const json=await response.json() as Row;model=s(json.model)||MODEL;
   const text=asRows(json.content).filter(x=>x.type==="text").map(x=>s(x.text)).join("");
   generated=JSON.parse(text) as Row;
