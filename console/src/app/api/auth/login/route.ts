@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
   if (process.env.NODE_ENV === "production" && process.env.ENABLE_LOCAL_OPERATORS !== "true") {
     return NextResponse.json(
-      { error: { code: "disabled", message: "Local test accounts are disabled. Use the Demo button." } },
+      { error: { code: "disabled", message: "Private SOC sign-in failed. Check your administrator password or use the demo." } },
       { status: 403 },
     );
   }
