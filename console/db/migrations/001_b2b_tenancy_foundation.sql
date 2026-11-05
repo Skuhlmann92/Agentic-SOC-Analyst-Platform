@@ -80,3 +80,15 @@ VALUES
  ('professional',34900,50,'{"monitoring":true,"ai_analysis":"advanced","reports":"weekly","remediation_scripts":true}'::jsonb),
  ('business',69900,150,'{"monitoring":true,"ai_analysis":"advanced","reports":"weekly","remediation_scripts":true,"priority_support":true}'::jsonb)
 ON CONFLICT(plan_code) DO NOTHING;
+
+-- Legacy private administrator mapping (replace after identity-provider migration).
+INSERT INTO public.soc_org_memberships(org_id,principal_id,role,status)
+VALUES('22222222-2222-4222-8222-222222222222','socadmin','platform_admin','active')
+ON CONFLICT(org_id,principal_id) DO NOTHING;
+-- Atomic admin login throttling table: stores keyed fingerprints, not raw addresses.
+CREATE TABLE IF NOT EXISTS public.soc_auth_throttle (
+ fingerprint text PRIMARY KEY,
+ window_start timestamptz NOT NULL DEFAULT now(),
+ attempts integer NOT NULL DEFAULT 0 CHECK(attempts>=0),
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
