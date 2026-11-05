@@ -41,10 +41,34 @@ function severity(v: unknown, level: number): string {
   if (level>=3) return "low";
   return "informational";
 }
+/** Retain bounded incident context without persisting full raw logs or obvious credentials. */
+function safeWazuhContext(raw: Row, rule: Row, data: Row): Row {
+  const sensitive = /(?:pass(?:word|wd)?|secret|token|api.?key|authorization|cookie|private.?key|credential)/i;
+  const clean = (input: unknown, depth=0): unknown => {
+    if (depth>5) return "[depth limit]";
+    if (Array.isArray(input)) return input.slice(0,30).map(x=>clean(x,depth+1));
+    if (input && typeof input==="object") {
+      return Object.fromEntries(Object.entries(input as Row).slice(0,75).filter(([k])=>!sensitive.test(k)).map(([k,v])=>[k,clean(v,depth+1)]));
+    }
+    if(typeof input==="string") return input.slice(0,1200).replace(/(password|token|secret|api[_-]?key)\s*[:=]\s*[^\s,;]+/ig,"$1=[REDACTED]");
+    return typeof input==="number"||typeof input==="boolean" ? input : null;
+  };
+  return {
+    source_location: value(raw.location).slice(0,250),
+    decoder: clean(raw.decoder || {}),
+    rule: clean({id:rule.id,level:rule.level,groups:rule.groups,mitre:rule.mitre,pci_dss:rule.pci_dss,description:rule.description}),
+    data: clean(data),
+    win: clean(obj(data.win)),
+    full_log_excerpt: clean(value(raw.full_log).slice(0,1600)),
+    manager_name:value(raw.manager).slice(0,120),
+  };
+}
+
 export type Normalized = {
   id: string; tenant_id: string; source: string; external_id: string;
   title: string; description: string; severity: string; status: string;
   rule_id: string | null; rule_level: number | null; rule_name: string; vendor: string; product: string;
+  wazuh_context?: Row;
   technique_ids: string[]; tactics: string[]; hostname: string | null;
   username: string | null; detected_at: string; created_at: string;
   updated_at: string; headline: string; event_type: string;
@@ -74,6 +98,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string): Normalized
     rule_id:value(rule.id)||null,rule_level:Number.isFinite(level)?level:null,rule_name:value(rule.description)||title,
     vendor:source==="wazuh"?"Wazuh":value(raw.vendor)||"EDR",
     product:value(raw.product)||source,technique_ids,tactics:[],
+    ...(source==="wazuh"?{wazuh_context:safeWazuhContext(raw,rule,data)}:{}),
     hostname:hostName,username:value(data.dstuser)||value(data.srcuser)||value(raw.username)||null,
     detected_at:at,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
     headline:title,event_type:value(rule.groups)||value(event.category)||"Security Alert",
@@ -178,7 +203,7 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
     class_name:a.event_type,activity_name:a.title,severity:a.severity,
     outcome:a.event_outcome,hostname:a.hostname,username:a.username,
     message:a.event_message,technique_ids:a.technique_ids,
-    document:{source:a.source,rule_id:a.rule_id,srcip:a.srcip}
+    document:{source:a.source,rule_id:a.rule_id,rule_level:a.rule_level,srcip:a.srcip,wazuh_context:a.wazuh_context||null}
   }));
   if(endpoint==="api/v1/search/alerts")return Response.json(page(filtered,q));
   if(endpoint==="api/v1/search/events")return Response.json(page(events,q));
