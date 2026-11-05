@@ -1,3 +1,4 @@
+import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { neon } from "@neondatabase/serverless";
 
 const TENANT = "11111111-1111-4111-8111-111111111111";
@@ -137,6 +138,24 @@ export async function publicDemoApi(request:Request,path:string[]){
   await prepare(sql);
   const endpoint=path.join("/");
   const params=new URL(request.url).searchParams;
+  if(endpoint==="api/v1/search/timeline"){
+    const options=timelineOptions(params.get("range"));
+    const {startMs,endMs,stepMs}=timelineBounds(options.step,options.points);
+    const alerts=await rows(sql,"alert");
+    const counts=new Map<string,number>();
+    for(const alert of alerts){
+      const when=new Date(String(alert.detected_at)).getTime();
+      if(!Number.isFinite(when)||when<startMs||when>Math.min(Date.now(),endMs+stepMs))continue;
+      const bucket=new Date(Math.floor(when/stepMs)*stepMs).toISOString();
+      const sev=String(alert.severity||"unknown");
+      const key=bucket+"|"+sev;
+      counts.set(key,(counts.get(key)||0)+1);
+    }
+    const records=[...counts].map(([key,count])=>({bucket:key.split("|")[0],severity:key.split("|")[1],count}));
+    return Response.json(createTimeline(options.range,options.step,options.points,records),{
+      headers:{"cache-control":"private, no-store"}
+    });
+  }
   if(endpoint==="api/v1/search/facets"){
     const alerts=await rows(sql,"alert");
     return Response.json({event_type:facet(alerts,"event_type"),severity:facet(alerts,"severity"),
