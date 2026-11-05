@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import { agentBody, forward, platformUrl, readJson } from "@/lib/api-proxy";
+import { publicDemoApi } from "@/lib/demo-api";
 import { openSession, SESSION_COOKIE } from "@/lib/session-token";
 
 async function sessionOr401() {
@@ -21,6 +22,13 @@ async function sessionOr401() {
 async function proxy(request: Request, path: string[], method: "GET" | "POST") {
   const { session, response } = await sessionOr401();
   if (!session || response) return response;
+  if (session.sub === "demo-analyst" && session.tenantId === "11111111-1111-4111-8111-111111111111") {
+    try {
+      return await publicDemoApi(request, path);
+    } catch {
+      return Response.json({ error: { code: "demo_database_unavailable", message: "The Neon demo database is temporarily unavailable." } }, { status: 503 });
+    }
+  }
   const target = platformUrl(path, request, session.tenantId);
   if (method === "GET") return forward(target, { method: "GET" });
   let body: Record<string, unknown> = {};
