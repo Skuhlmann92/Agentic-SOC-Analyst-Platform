@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+import { LIVE_TENANT } from "@/lib/live-api";
 import { NextResponse } from "next/server";
 
 import { findOperator, isUuid } from "@/lib/operators";
@@ -23,6 +25,24 @@ export async function POST(request: Request) {
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true, secure: process.env.NODE_ENV === "production",
       sameSite: "lax", path: "/", maxAge: 60 * 60 * 4,
+    });
+    return response;
+  }
+  const adminName = process.env.SOC_ADMIN_USERNAME || "socadmin";
+  const adminPassword = process.env.SOC_ADMIN_PASSWORD;
+  const provided = body.password || "";
+  const safeMatch = (left: string, right: string) => {
+    const a = Buffer.from(left), b = Buffer.from(right);
+    return a.length === b.length && timingSafeEqual(a,b);
+  };
+  if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
+    const token = await sealSession({
+      sub: adminName, role: "admin", name: "SOC Administrator",
+      tenantId: LIVE_TENANT, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
+    });
+    const response = NextResponse.json({name:"SOC Administrator",role:"admin",tenantId:LIVE_TENANT});
+    response.cookies.set(SESSION_COOKIE,token,{
+      httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:60*60*8,
     });
     return response;
   }
