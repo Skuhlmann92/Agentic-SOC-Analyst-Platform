@@ -1,3 +1,4 @@
+import type {TimelineRange,TimelineResponse} from "@/lib/timeline";
 import type {
   Alert,
   AlertHit,
@@ -69,6 +70,7 @@ export const sdk = {
   searchEvents: (params: QueryParams) => platform<Page<Record<string, unknown>>>(`api/v1/search/events${search(params)}`),
   getEvent: (id: string) => platform<EventDetail>(`api/v1/events/${id}`),
   facets: (params: QueryParams = {}) => platform<Facets>(`api/v1/search/facets${search(params)}`),
+  timeline: (range: TimelineRange) => platform<TimelineResponse>(`api/v1/search/timeline${search({range})}`),
   searchEntities: (params: QueryParams) => platform<Page<Entity>>(`api/v1/search/entities${search(params)}`),
   getEntity: (id: string) => platform<Entity>(`api/v1/search/entities/${id}`),
   listCases: (params: QueryParams) => platform<Page<CaseRecord>>(`api/v1/cases${search(params)}`),
