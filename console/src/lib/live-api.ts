@@ -1,3 +1,4 @@
+import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
 import { deriveLiveViews } from "@/lib/live-views";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -160,6 +161,23 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
   await initLive(sql);
   const endpoint=path.join("/");
   const parts=endpoint.split("/");
+  if(endpoint==="api/v1/search/timeline"){
+    if(request.method!=="GET")return Response.json({error:{code:"method_not_allowed",message:"Timeline is read-only"}},{status:405});
+    const options=timelineOptions(new URL(request.url).searchParams.get("range"));
+    const {startMs,endMs,stepMs}=timelineBounds(options.step,options.points);
+    const aggregated=await sql.query(
+      `SELECT date_bin(make_interval(mins => $2::int),detected_at,'2000-01-01 00:00:00+00'::timestamptz) AS bucket,
+              severity,COUNT(*)::int AS count
+       FROM soc_live_alerts
+       WHERE tenant_id=$1 AND detected_at >= $3::timestamptz AND detected_at < $4::timestamptz
+       GROUP BY 1,2 ORDER BY 1`,
+      [LIVE_TENANT,options.step,new Date(startMs).toISOString(),new Date(Math.min(Date.now(),endMs+stepMs)).toISOString()]
+    );
+    return Response.json(createTimeline(options.range,options.step,options.points,
+      resultRows(aggregated) as Array<{bucket:unknown;severity:unknown;count:unknown}>),{
+      headers:{"Cache-Control":"private, no-store"}
+    });
+  }
   if(endpoint.startsWith("api/v1/agent/")) return agentApi(sql,request,endpoint);
   if(request.method==="POST" && parts.length===5 && parts.slice(0,3).join("/")==="api/v1/alerts" && parts[4]==="status"){
     const alertId=parts[3];
