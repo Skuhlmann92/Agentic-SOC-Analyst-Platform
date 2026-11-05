@@ -44,7 +44,7 @@ function severity(v: unknown, level: number): string {
 export type Normalized = {
   id: string; tenant_id: string; source: string; external_id: string;
   title: string; description: string; severity: string; status: string;
-  rule_id: string | null; rule_name: string; vendor: string; product: string;
+  rule_id: string | null; rule_level: number | null; rule_name: string; vendor: string; product: string;
   technique_ids: string[]; tactics: string[]; hostname: string | null;
   username: string | null; detected_at: string; created_at: string;
   updated_at: string; headline: string; event_type: string;
@@ -71,7 +71,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string): Normalized
     id,tenant_id:LIVE_TENANT,source,external_id:idRaw||key.slice(0,100),title,
     description:(value(raw.description)||value(raw.message)||title).slice(0,2000),
     severity:severity(raw.severity,level),status:"new",
-    rule_id:value(rule.id)||null,rule_name:value(rule.description)||title,
+    rule_id:value(rule.id)||null,rule_level:Number.isFinite(level)?level:null,rule_name:value(rule.description)||title,
     vendor:source==="wazuh"?"Wazuh":value(raw.vendor)||"EDR",
     product:value(raw.product)||source,technique_ids,tactics:[],
     hostname:hostName,username:value(data.dstuser)||value(data.srcuser)||value(raw.username)||null,
