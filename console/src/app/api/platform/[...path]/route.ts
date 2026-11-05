@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { publicDemoApi } from "@/lib/demo-api";
 import { liveApi } from "@/lib/live-api";
 import {authorizeWorkspace} from "@/lib/tenant-policy";
+import {verifyLegacyAdminMembership} from "@/lib/organization-membership";
 import { openSession, SESSION_COOKIE } from "@/lib/session-token";
 
 async function sessionOr401() {
@@ -33,6 +34,10 @@ async function proxy(request: Request, path: string[], method: "GET" | "POST") {
     }
   }
   if(authorization.kind==="legacy_live"){
+    if(!await verifyLegacyAdminMembership(session.sub))return Response.json(
+      {error:{code:"tenant_membership_denied",message:"No active organization membership for the current session."}},
+      {status:403,headers:{"cache-control":"no-store"}}
+    );
     try{
       return await liveApi(request,path,session.name);
     }catch(error){
