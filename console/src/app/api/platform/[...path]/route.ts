@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 
 import { agentBody, forward, platformUrl, readJson } from "@/lib/api-proxy";
 import { publicDemoApi } from "@/lib/demo-api";
+import { liveApi, LIVE_TENANT } from "@/lib/live-api";
 import { openSession, SESSION_COOKIE } from "@/lib/session-token";
 
 async function sessionOr401() {
@@ -27,6 +28,13 @@ async function proxy(request: Request, path: string[], method: "GET" | "POST") {
       return await publicDemoApi(request, path);
     } catch {
       return Response.json({ error: { code: "demo_database_unavailable", message: "The Neon demo database is temporarily unavailable." } }, { status: 503 });
+    }
+  }
+  if (session.sub === (process.env.SOC_ADMIN_USERNAME || "socadmin") && session.tenantId === LIVE_TENANT) {
+    try {
+      return await liveApi(request,path);
+    } catch {
+      return Response.json({error:{code:"live_database_unavailable",message:"Neon live data is not available."}},{status:503});
     }
   }
   const target = platformUrl(path, request, session.tenantId);
