@@ -69,7 +69,7 @@ export function deriveLiveViews(alerts:Row[]){
         opened_at:oldest(records),closed_at:null,investigation_ids:[investigationId],finding_ids:[],
         correlation:{method:"rule-host-time-window",window_minutes:60,rule_id:rule,
           hostname:hostName,alert_count:records.length,evidence_alert_ids:records.slice(0,75).map(a=>a.id),
-          explanation:reason}};
+          explanation:reason}});
       investigations.push({id:investigationId,case_id:caseId,title:"Review "+title,
         status:"open",priority:severityGroup,hypothesis,
         summary:reason+". Evidence is linked; this is an automated rule-based correlation, not a Claude conclusion.",
