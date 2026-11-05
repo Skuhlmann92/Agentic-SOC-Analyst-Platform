@@ -1,3 +1,4 @@
+import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
 import { deriveLiveViews } from "@/lib/live-views";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
@@ -110,7 +111,7 @@ export async function ingestEvents(events: unknown[], source: string): Promise<{
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT DO NOTHING RETURNING id`,
       [LIVE_TENANT,row.id,row.external_id,row.source,row.severity,row.status,row.detected_at,JSON.stringify(row)]
     );
-    if(resultRows(res).length) accepted++; else duplicates++;
+    if(resultRows(res).length) { accepted++; try { await analyzeNewAlert(sql,row as unknown as Row); } catch(error) { console.error("SOC automated triage failed", error instanceof Error ? error.message : "unknown"); } } else duplicates++;
   }
   return {accepted,duplicates};
 }
@@ -134,6 +135,7 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
   await initLive(sql);
   const endpoint=path.join("/");
   const parts=endpoint.split("/");
+  if(endpoint.startsWith("api/v1/agent/")) return agentApi(sql,request,endpoint);
   if(request.method==="POST" && parts.length===5 && parts.slice(0,3).join("/")==="api/v1/alerts" && parts[4]==="status"){
     const alertId=parts[3];
     if(!/^[0-9a-f-]{36}$/i.test(alertId))
@@ -200,8 +202,7 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
     );
     return Response.json(page(filteredEntities,q));
   }
-  if(endpoint==="api/v1/agent/runs"||endpoint==="api/v1/agent/drafts")
-    return Response.json(page([],q));
+
   const detailType=endpoint.startsWith("api/v1/cases/")?"cases":
     endpoint.startsWith("api/v1/investigations/")?"investigations":
     endpoint.startsWith("api/v1/search/entities/")?"entities":null;
