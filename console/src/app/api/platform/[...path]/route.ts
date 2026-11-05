@@ -32,7 +32,7 @@ async function proxy(request: Request, path: string[], method: "GET" | "POST") {
   }
   if (session.sub === (process.env.SOC_ADMIN_USERNAME || "socadmin") && session.tenantId === LIVE_TENANT) {
     try {
-      return await liveApi(request,path);
+      return await liveApi(request,path,session.name);
     } catch {
       return Response.json({error:{code:"live_database_unavailable",message:"Neon live data is not available."}},{status:503});
     }
