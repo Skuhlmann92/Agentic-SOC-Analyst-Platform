@@ -9,6 +9,17 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/api/endpoint-heartbeat" && request.method === "POST") return NextResponse.next();
   if (pathname === "/api/endpoint-inventory" && request.method === "POST") return NextResponse.next();
   if (pathname === "/api/auth/login" || pathname === "/api/ingest" || pathname === "/api/health/database") return NextResponse.next();
+  // Cookies are SameSite=Lax; additionally reject cross-origin browser writes.
+  // Machine-to-machine ingestion uses independent bearer tokens and no cookies.
+  if(pathname.startsWith("/api/")&& !["GET","HEAD","OPTIONS"].includes(request.method)){
+    const origin=request.headers.get("origin");
+    if(origin&&origin!==request.nextUrl.origin){
+      return NextResponse.json(
+        {error:{code:"invalid_origin",message:"Cross-origin API mutation denied."}},
+        {status:403,headers:{"cache-control":"no-store"}}
+      );
+    }
+  }
   const session = await openSession(request.cookies.get(SESSION_COOKIE)?.value);
   if (pathname === "/login") {
     if (session) return NextResponse.redirect(new URL("/dashboard", request.url));
