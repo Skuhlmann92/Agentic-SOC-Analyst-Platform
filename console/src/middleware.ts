@@ -7,6 +7,7 @@ import { openSession, SESSION_COOKIE } from "@/lib/session-token";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname === "/api/endpoint-heartbeat" && request.method === "POST") return NextResponse.next();
+  if (pathname === "/api/endpoint-inventory" && request.method === "POST") return NextResponse.next();
   if (pathname === "/api/auth/login" || pathname === "/api/ingest" || pathname === "/api/health/database") return NextResponse.next();
   const session = await openSession(request.cookies.get(SESSION_COOKIE)?.value);
   if (pathname === "/login") {
