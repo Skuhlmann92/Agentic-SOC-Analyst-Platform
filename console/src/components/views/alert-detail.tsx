@@ -87,6 +87,12 @@ export function AlertDetailView({ alertId, liveTriage=false }: { alertId: string
           {event.isLoading ? <p className="mt-3 text-sm text-muted-foreground">Loading the canonical event.</p> : null}
           {event.isError ? <p className="mt-3 text-sm text-danger">The linked event could not be loaded.</p> : null}
           {!row.canonical_event_id ? <p className="mt-3 text-sm text-muted-foreground">This alert has no canonical event.</p> : null}
+          {event.data?.document?.wazuh_context ? (
+            <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Wazuh event details · Windows / decoder / rule</h3>
+              <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed">{JSON.stringify(event.data.document.wazuh_context,null,2)}</pre>
+            </div>
+          ) : null}
           {event.data ? (
             <div className="mt-3 space-y-2 text-sm">
               <p>{event.data.message}</p>
