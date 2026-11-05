@@ -44,7 +44,7 @@ async function save(sql: Sql, kind: string, row: RecordRow) {
 async function prepare(sql: Sql) {
   await sql.query("CREATE TABLE IF NOT EXISTS soc_demo_records (tenant_id text NOT NULL, kind text NOT NULL, id uuid NOT NULL, payload jsonb NOT NULL, PRIMARY KEY(tenant_id,kind,id))");
   const exists = await sql.query("SELECT id FROM soc_demo_records WHERE tenant_id=$1 AND kind='marker' LIMIT 1",[TENANT]);
-  if (exists.length) return;
+  if (Array.isArray(exists) && exists.length) return;
   for (let i=0;i<samples.length;i++) {
     const [title,severity,source,hostname,username,technique,eventType] = samples[i];
     const at=time(i+1), eventId=uuid(200,i+1);
@@ -94,7 +94,7 @@ async function prepare(sql: Sql) {
 
 async function rows(sql: Sql, kind: string):Promise<RecordRow[]> {
   const result=await sql.query("SELECT payload FROM soc_demo_records WHERE tenant_id=$1 AND kind=$2",[TENANT,kind]);
-  return result.map(r=>r.payload as RecordRow);
+  return (Array.isArray(result) ? result : []).map(r=>(r as Record<string, unknown>).payload as RecordRow);
 }
 
 function page(items:RecordRow[], params:URLSearchParams){
