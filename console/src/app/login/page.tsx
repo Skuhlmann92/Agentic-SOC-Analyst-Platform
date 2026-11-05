@@ -66,7 +66,7 @@ export default function LoginPage() {
           <p className="mb-3 mt-1 text-xs text-muted-foreground">Explore fictional security alerts and investigations. No password or tenant ID required.</p>
           <Button type="button" className="w-full" disabled={pending} onClick={openDemo}>Open demo dashboard</Button>
         </div>
-        <p className="mb-3 text-xs uppercase text-muted-foreground">Operator sign-in (local development only)</p>
+        <p className="mb-3 text-xs uppercase text-muted-foreground">Private SOC administrator sign-in</p>
         <label className="mb-3 block text-sm">
           <span className="mb-1 block text-muted-foreground">Operator</span>
           <select className="field" value={operator} onChange={(event) => setOperator(event.target.value)}>
@@ -84,7 +84,7 @@ export default function LoginPage() {
           <input
             className="field font-mono"
             value={tenantId}
-            placeholder="tenant uuid"
+            placeholder="Optional for private admin (assigned automatically)"
             onChange={(event) => setTenantId(event.target.value)}
           />
         </label>
@@ -93,7 +93,7 @@ export default function LoginPage() {
           {pending ? "Signing in" : "Enter console"}
         </Button>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          Public demo access is read-only. Local operator accounts are disabled in production.
+          For live Wazuh/EDR data, choose Administrator and enter your private SOC password. Tenant ID is assigned automatically. Demo access is read-only.
         </p>
       </form>
     </main>
