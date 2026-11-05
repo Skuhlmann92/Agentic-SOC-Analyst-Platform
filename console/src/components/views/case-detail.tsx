@@ -1,3 +1,4 @@
+import {CorrelationAiPanel} from "@/components/views/correlation-ai-panel";
 "use client";
 
 import { useQuery, useQueries } from "@tanstack/react-query";
@@ -38,6 +39,7 @@ export function CaseDetailView({ caseId }: { caseId: string }) {
         <StatusBadge value={item.severity} />
         <span className="text-sm text-muted-foreground">{item.assignee || "Unassigned"} · opened {formatTime(item.opened_at)}</span>
       </div>
+      {item.external_ref?.startsWith("CORR-")?<CorrelationAiPanel caseId={caseId}/>:null}
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="panel rounded-lg p-4">
           <h2 className="mb-3 text-sm font-medium">Investigations</h2>
