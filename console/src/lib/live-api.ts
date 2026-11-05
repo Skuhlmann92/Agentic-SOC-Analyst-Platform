@@ -200,6 +200,106 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
       [LIVE_TENANT,alertId,"set_status:"+status,actor]);
     return Response.json(row.payload);
   }
+  if(request.method==="GET" && endpoint==="api/v1/search/alerts"){
+    const q=new URL(request.url).searchParams;
+    const start=q.get("from"),end=q.get("to");
+    const from=start&&Number.isFinite(Date.parse(start))?new Date(start).toISOString():null;
+    const to=end&&Number.isFinite(Date.parse(end))?new Date(end).toISOString():null;
+    if((start&&!from)||(end&&!to)||(from&&to&&from>=to))
+      return Response.json({error:{code:"invalid_time_range",message:"Invalid ISO timestamp range"}},{status:422});
+    const limit=Math.min(100,Math.max(1,Number(q.get("limit"))||25));
+    const offset=Math.min(100000,Math.max(0,Number(q.get("cursor"))||0));
+    const source=q.get("source")||null,severity=q.get("severity")||null,status=q.get("status")||null;
+    const host=q.get("host")?.slice(0,128)||null,rule=q.get("rule_id")?.slice(0,80)||null;
+    const level=q.get("rule_level");
+    if(level!==null&&(!/^\\d{1,2}$/.test(level)||Number(level)>15))
+      return Response.json({error:{code:"invalid_rule_level",message:"Rule level must be between 0 and 15"}},{status:422});
+    const technique=q.get("technique_id")?.slice(0,40)||null;
+    const term=q.get("q")?.trim().slice(0,120)||null;
+    const sort=q.get("sort")==="severity"?"severity":q.get("sort")==="created_time"?"created":"detected";
+    const result=await sql.query(
+      `SELECT payload FROM soc_live_alerts WHERE tenant_id=$1
+       AND ($2::timestamptz IS NULL OR detected_at >= $2::timestamptz)
+       AND ($3::timestamptz IS NULL OR detected_at < $3::timestamptz)
+       AND ($4::text IS NULL OR source=$4)
+       AND ($5::text IS NULL OR severity=$5)
+       AND ($6::text IS NULL OR status=$6)
+       AND ($7::text IS NULL OR payload->>'hostname'=$7)
+       AND ($8::text IS NULL OR payload->>'rule_id'=$8)
+       AND ($9::int IS NULL OR (CASE WHEN payload->>'rule_level' ~ '^[0-9]+
+  const result=await sql.query(
+    "SELECT payload FROM soc_live_alerts WHERE tenant_id=$1 ORDER BY detected_at DESC LIMIT 5000",[LIVE_TENANT]
+  );
+  const alerts=resultRows(result).map(r=>r.payload as Row);
+  if(endpoint==="api/v1/security/posture")return Response.json(deriveSecurityPosture(alerts),{headers:{"cache-control":"private, no-store"}});
+  const {cases,investigations,entities}=deriveLiveViews(alerts);
+  const url=new URL(request.url), q=url.searchParams;
+  const query=value(q.get("q")).toLowerCase();
+  const filtered=alerts.filter(a=>{
+    if(query&&!JSON.stringify(a).toLowerCase().includes(query))return false;
+    for(const key of ["severity","source","status"]){
+      const v=q.get(key); if(v&&v!==a[key])return false;
+    }
+    if(q.get("alert_id")&&q.get("alert_id")!==a.id)return false;
+    return true;
+  });
+  const events=filtered.map(a=>({
+    id:a.canonical_event_id, source:a.source, event_time:a.detected_at,
+    class_name:a.event_type,activity_name:a.title,severity:a.severity,
+    outcome:a.event_outcome,hostname:a.hostname,username:a.username,
+    message:a.event_message,technique_ids:a.technique_ids,
+    document:{source:a.source,rule_id:a.rule_id,rule_level:a.rule_level,srcip:a.srcip,wazuh_context:a.wazuh_context||null}
+  }));
+  if(endpoint==="api/v1/search/alerts")return Response.json(page(filtered,q));
+  if(endpoint==="api/v1/search/events")return Response.json(page(events,q));
+  if(endpoint==="api/v1/search/facets")return Response.json({
+    severity:bucket(filtered,"severity"),source:bucket(filtered,"source"),
+    event_type:bucket(filtered,"event_type"),host:bucket(filtered,"hostname"),user:bucket(filtered,"username")
+  });
+  if(endpoint==="api/v1/operations/connectors")
+    return Response.json({data:bucket(alerts,"source").map(b=>({
+      source:b.value,label:b.value,projected:b.count,dead_lettered:0,
+      last_received_at:value(alerts.find(a=>a.source===b.value)?.detected_at)||null
+    }))});
+  if(endpoint==="api/v1/operations/dead-letters"||endpoint==="api/v1/operations/publications")
+    return Response.json(page([],q));
+  if(endpoint==="api/v1/cases")return Response.json(page(cases.filter(item=>!q.get("case_status")||item.status===q.get("case_status")),q));
+  if(endpoint==="api/v1/investigations")return Response.json(page(investigations.filter(item=>!q.get("investigation_status")||item.status===q.get("investigation_status")),q));
+  if(endpoint==="api/v1/search/entities"){
+    const filteredEntities=entities.filter(item=>
+      (!q.get("type")||item.entity_type===q.get("type"))&&
+      (!q.get("q")||JSON.stringify(item).toLowerCase().includes((q.get("q")||"").toLowerCase()))
+    );
+    return Response.json(page(filteredEntities,q));
+  }
+
+  const detailType=endpoint.startsWith("api/v1/cases/")?"cases":
+    endpoint.startsWith("api/v1/investigations/")?"investigations":
+    endpoint.startsWith("api/v1/search/entities/")?"entities":null;
+  if(detailType){
+    const collection=detailType==="cases"?cases:detailType==="investigations"?investigations:entities;
+    const item=collection.find(row=>row.id===endpoint.split("/").at(-1));
+    return item?Response.json(item):Response.json({error:{code:"not_found",message:"Record not found"}},{status:404});
+  }
+  const alertMatch=endpoint.match(/^api\/v1\/alerts\/([a-f0-9-]{36})$/i);
+  if(alertMatch){const a=alerts.find(r=>r.id===alertMatch[1]);return a?Response.json(a):Response.json({error:{code:"not_found",message:"Alert not found"}},{status:404});}
+  const eventMatch=endpoint.match(/^api\/v1\/events\/([a-f0-9-]{36})$/i);
+  if(eventMatch){const e=events.find(r=>r.id===eventMatch[1]);return e?Response.json(e):Response.json({error:{code:"not_found",message:"Event not found"}},{status:404});}
+  return Response.json({error:{code:"not_implemented",message:"This feature requires the full SOC Python backend."}},{status:501});
+}
+ THEN (payload->>'rule_level')::int ELSE NULL END)=$9)
+       AND ($10::text IS NULL OR payload->'technique_ids' ? $10)
+       AND ($11::text IS NULL OR (payload->>'title' ILIKE '%%'||$11||'%%' OR payload->>'description' ILIKE '%%'||$11||'%%'))
+       ORDER BY
+         CASE WHEN $12='severity' THEN CASE severity WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 ELSE 1 END END DESC NULLS LAST,
+         CASE WHEN $12='created' THEN payload->>'created_at' END DESC NULLS LAST,
+         detected_at DESC LIMIT $13 OFFSET $14`,
+       [LIVE_TENANT,from,to,source,severity,status,host,rule,level===null?null:Number(level),technique,term,sort,limit+1,offset]
+    );
+    const items=resultRows(result).map(r=>r.payload as Row);
+    return Response.json({data:items.slice(0,limit),
+      page:{limit,has_more:items.length>limit,next_cursor:items.length>limit?String(offset+limit):null}});
+  }
   if(request.method!=="GET")
     return Response.json({error:{code:"method_not_allowed",message:"Unsupported private SOC operation"}},{status:405});
   const result=await sql.query(
