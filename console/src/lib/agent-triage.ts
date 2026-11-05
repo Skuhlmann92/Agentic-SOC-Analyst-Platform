@@ -37,7 +37,7 @@ async function buildRun(sql:SQL,alert:Row):Promise<Row>{
  const highCount=timeWindow.filter(x=>severityWeight(s(x.severity))>=3).length;
  const hypothesis=score>=75?"Priority triage: inspect authentication and process context on this endpoint.":score>=45?
  "Correlated activity merits analyst review.":"Low confidence signal: validate the rule and endpoint context.";
- const findings=[
+ const findings:Array<{position:number;template:string;statement:string;arguments:Record<string,unknown>;citations:Array<{kind:string;record_id:string}>}> = [
    {position:1,template:"observed_alert",statement:`Wazuh/EDR reported "${primaryTitle}" on ${hostname} at ${detected}.`,
      arguments:{hostname,detected_at:detected,severity:alert.severity,rule_id:rule},
      citations:[{kind:"alert",record_id:alertId}]},
