@@ -54,7 +54,7 @@ export async function GET(req:Request){
   const sql=DB();await prepare(sql);
   const requested=new URL(req.url).searchParams.get("host")||"";
   const result=rows(await sql.query("SELECT hostname,received_at,payload FROM soc_endpoint_inventory WHERE tenant_id=$1 ORDER BY hostname",[LIVE_TENANT]));
-  const items=result.map(x=>({...x.payload as R,received_at:x.received_at}));
+  const items:R[]=result.map(x=>({...((x.payload && typeof x.payload==="object")?x.payload as R:{}),received_at:x.received_at}));
   return Response.json({generated_at:new Date().toISOString(),source:"local_signed_inventory",wazuh_syscollector_connected:false,
    cve_source_connected:false,data:requested?items.filter(x=>x.hostname===requested):items},
    {headers:{"cache-control":"private, no-store"}});
