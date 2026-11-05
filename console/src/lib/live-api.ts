@@ -67,7 +67,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string): Normalized
     .map(value).filter(Boolean).slice(0,12);
   return {
     id,tenant_id:LIVE_TENANT,source,external_id:idRaw||key.slice(0,100),title,
-    description:(value(raw.full_log)||value(raw.description)||value(raw.message)||title).slice(0,2000),
+    description:(value(raw.description)||value(raw.message)||title).slice(0,2000),
     severity:severity(raw.severity,level),status:"new",
     rule_id:value(rule.id)||null,rule_name:value(rule.description)||title,
     vendor:source==="wazuh"?"Wazuh":value(raw.vendor)||"EDR",
