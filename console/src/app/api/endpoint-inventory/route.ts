@@ -18,12 +18,12 @@ export async function POST(req:Request){
  const token=(req.headers.get("authorization")||"").replace(/^Bearer /,"");
  const hostname=match(token,process.env.SOC_HEARTBEAT_PI_TOKEN)?"Homelab":match(token,process.env.SOC_HEARTBEAT_WIN_TOKEN)?"DESKTOP-VKES2QF":null;
  if(!hostname)return fail(401,"Invalid endpoint credential");
- const raw=await req.text();if(raw.length>180000)return fail(413,"Inventory too large");
+ const raw=await req.text();if(raw.length>450000)return fail(413,"Inventory too large");
  let body:R;try{const value=JSON.parse(raw);body=value&&typeof value==="object"&&!Array.isArray(value)?value:{};}catch{return fail(400,"Invalid inventory JSON");}
  const source=s(body.source);
  if(source!=="local_signed_inventory")return fail(422,"Unknown inventory source");
  const incoming=Array.isArray(body.software)?body.software:[];
- if(incoming.length>1200)return fail(422,"Too many software entries");
+ if(incoming.length>2500)return fail(422,"Too many software entries");
  const seen=new Set<string>();
  const software:{name:string;version:string;publisher:string}[]=[];
  for(const item of incoming){
