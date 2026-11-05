@@ -76,6 +76,7 @@ export type CaseRecord = {
 export type CaseDetail = CaseRecord & {
   investigation_ids: string[];
   finding_ids: string[];
+  correlation?: {method:string;window_minutes:number;rule_id:string;hostname:string;alert_count:number;evidence_alert_ids:string[];explanation:string};
 };
 
 export type Investigation = {
