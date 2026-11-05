@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 
-import { agentBody, forward, platformUrl, readJson } from "@/lib/api-proxy";
 import { publicDemoApi } from "@/lib/demo-api";
-import { liveApi, LIVE_TENANT } from "@/lib/live-api";
+import { liveApi } from "@/lib/live-api";
+import {authorizeWorkspace} from "@/lib/tenant-policy";
 import { openSession, SESSION_COOKIE } from "@/lib/session-token";
 
 async function sessionOr401() {
@@ -23,34 +23,29 @@ async function sessionOr401() {
 async function proxy(request: Request, path: string[], method: "GET" | "POST") {
   const { session, response } = await sessionOr401();
   if (!session || response) return response;
-  if (session.sub === "demo-analyst" && session.tenantId === "11111111-1111-4111-8111-111111111111") {
-    try {
-      return await publicDemoApi(request, path);
-    } catch {
-      return Response.json({ error: { code: "demo_database_unavailable", message: "The Neon demo database is temporarily unavailable." } }, { status: 503 });
+  const authorization=authorizeWorkspace(session,process.env.SOC_ADMIN_USERNAME||"socadmin");
+  if(authorization.kind==="public_demo"){
+    try{
+      return await publicDemoApi(request,path);
+    }catch(error){
+      console.error("SOC demo API error",error instanceof Error?error.name:"unknown");
+      return Response.json({error:{code:"demo_unavailable",message:"Demo data is temporarily unavailable."}},{status:503});
     }
   }
-  if (session.sub === (process.env.SOC_ADMIN_USERNAME || "socadmin") && session.tenantId === LIVE_TENANT) {
-    try {
+  if(authorization.kind==="legacy_live"){
+    try{
       return await liveApi(request,path,session.name);
-    } catch {
-      return Response.json({error:{code:"live_database_unavailable",message:"Neon live data is not available."}},{status:503});
+    }catch(error){
+      console.error("SOC live API error",error instanceof Error?error.name:"unknown");
+      return Response.json({error:{code:"live_unavailable",message:"Live SOC data is temporarily unavailable."}},{status:503});
     }
   }
-  const target = platformUrl(path, request, session.tenantId);
-  if (method === "GET") return forward(target, { method: "GET" });
-  let body: Record<string, unknown> = {};
-  try {
-    body = await readJson(request);
-    body = await agentBody(path.join("/"), body, session);
-  } catch (error) {
-    if (error instanceof Response) return error;
-    return Response.json(
-      { error: { code: "validation_error", message: "The request body is not valid JSON." } },
-      { status: 422 },
-    );
-  }
-  return forward(target, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } });
+  // An authenticated session is NOT evidence of membership in an arbitrary tenant.
+  // The old generic forwarding path could make that dangerous; fail closed until
+  // database-backed membership checks and tenant-scoped service credentials ship.
+  return Response.json({error:{code:"tenant_access_denied",
+    message:"No verified organization membership for this workspace."}},{status:403});
+
 }
 
 export async function GET(request: Request, context: { params: Promise<{ path: string[] }> }) {
