@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { RemediationPanel } from "@/components/views/remediation-panel";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/severity";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
@@ -106,6 +107,7 @@ function Workspace() {
           {run.data ? <RunPanels run={run.data} /> : null}
         </section>
       </div>
+      <RemediationPanel initialAlert={alertId} />
     </div>
   );
 }
