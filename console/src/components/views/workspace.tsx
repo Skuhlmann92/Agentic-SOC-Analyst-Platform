@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { RemediationPanel } from "@/components/views/remediation-panel";
+import { usePreferences } from "@/lib/preferences";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/severity";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
@@ -30,6 +31,7 @@ export function WorkspaceView() {
 }
 
 function Workspace() {
+  const {t}=usePreferences();
   const search = useSearchParams();
   const router = useRouter();
   const client = useQueryClient();
@@ -61,30 +63,30 @@ function Workspace() {
   return (
     <div>
       <PageHeader
-        title="Agent workspace"
-        detail="Start a local investigation. The draft cites stored records and is not a source of truth. There is no chat."
+        title={t("KI-Agent & Skripte","Agent workspace")}
+        detail={t("Automatische Analysen überprüfen, Wazuh-Alerts korrelieren und PowerShell-Skriptvorschläge mit Claude erstellen. Keine ungeprüfte Ausführung.","Review automated triage, correlate Wazuh alerts and generate Claude PowerShell proposals. No unreviewed execution.")}
       />
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
         <section className="space-y-4">
           <form className="panel rounded-lg p-4" onSubmit={submit}>
-            <h2 className="text-sm font-medium">Run investigation</h2>
+            <h2 className="text-sm font-medium">{t("Untersuchung starten","Run investigation")}</h2>
             <label className="mt-3 block text-xs text-muted-foreground">
-              Alert id
+              {t("Alert-ID","Alert ID")}
               <input className="field mt-1 font-mono" value={alertId} onChange={(event) => setAlertId(event.target.value)} />
             </label>
             <label className="mt-3 block text-xs text-muted-foreground">
-              Or a question about stored records
+              {t("Oder Frage zu gespeicherten Ereignissen","Or a question about stored records")}
               <textarea className="field mt-1 h-20 py-2" value={question} onChange={(event) => setQuestion(event.target.value)} />
             </label>
             {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
             <Button className="mt-3 w-full" disabled={start.isPending} type="submit">
-              {start.isPending ? "Running" : "Run investigation"}
+              {start.isPending ? t("Läuft","Running") : t("Untersuchung ausführen","Run investigation")}
             </Button>
           </form>
           <div className="panel rounded-lg p-3">
-            <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Recent runs</p>
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("Letzte Analysen","Recent runs")}</p>
             {runs.isLoading ? <p className="text-sm text-muted-foreground">Loading runs</p> : null}
-            {runs.data && runs.data.data.length === 0 ? <p className="text-sm text-muted-foreground">No investigations have been started from this workspace yet. A run drafts cited claims. A person approves or rejects that draft.</p> : null}
+            {runs.data && runs.data.data.length === 0 ? <p className="text-sm text-muted-foreground">{t("Noch keine Analysen vorhanden. Ergebnisse werden als freigabepflichtige Entwürfe gespeichert.","No investigations yet. Drafts require human approval.")}</p> : null}
             <ul className="space-y-1">
               {(runs.data?.data ?? []).map((item) => (
                 <li key={item.id}>
@@ -101,7 +103,7 @@ function Workspace() {
           </div>
         </section>
         <section>
-          {!selected ? <EmptyState title="No run selected" body="Start an investigation or choose a recent run." /> : null}
+          {!selected ? <EmptyState title={t("Keine Analyse ausgewählt","No run selected")} body={t("Analyse starten oder aus der Liste auswählen.","Start an investigation or choose a recent run.")} /> : null}
           {run.isLoading ? <LoadingBlock label="Loading run" /> : null}
           {run.isError ? <ErrorState message={run.error instanceof ApiClientError ? run.error.message : "The run could not be loaded."} onRetry={() => run.refetch()} /> : null}
           {run.data ? <RunPanels run={run.data} /> : null}
