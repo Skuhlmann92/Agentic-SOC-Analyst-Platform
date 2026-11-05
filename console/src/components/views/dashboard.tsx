@@ -6,7 +6,8 @@ import {Activity,ArrowRight,Bell,BookOpen,Briefcase,CheckCircle2,Clock3,Monitor,
 import {Area,AreaChart,CartesianGrid,Cell,Pie,PieChart,ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 import {EmptyState,ErrorState,LoadingBlock} from "@/components/states";
 import {StatusBadge} from "@/components/severity";
-import {countLabel,formatTime,dayKey} from "@/lib/format";
+import {countLabel,formatTime} from "@/lib/format";
+import type {TimelineRange} from "@/lib/timeline";
 import {ApiClientError,sdk} from "@/lib/sdk/client";
 import {usePreferences} from "@/lib/preferences";
 
@@ -15,18 +16,17 @@ const tooltip={contentStyle:{background:"var(--surface-elevated)",border:"1px so
 export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"other"}){
  const {t,locale}=usePreferences();
  const client=useQueryClient();
- const [range,setRange]=useState<"24h"|"7d"|"all">("7d");
+ const [range,setRange]=useState<TimelineRange>("24h");
  const alerts=useQuery({queryKey:["dashboard","recent"],queryFn:()=>sdk.searchAlerts({limit:100,sort:"event_time"}),refetchInterval:60000});
+ const timeline=useQuery({queryKey:["dashboard","timeline",range],queryFn:()=>sdk.timeline(range),refetchInterval:60000});
  const facets=useQuery({queryKey:["dashboard","facets"],queryFn:()=>sdk.facets(),refetchInterval:60000});
  const cases=useQuery({queryKey:["dashboard","cases"],queryFn:()=>sdk.listCases({limit:100})});
  const reviews=useQuery({queryKey:["dashboard","reviews"],queryFn:()=>sdk.listDrafts({status:"pending_approval",limit:100})});
  const investigations=useQuery({queryKey:["dashboard","investigations"],queryFn:()=>sdk.listInvestigations({limit:100})});
- const queries=[alerts,facets,cases,reviews,investigations];
+ const queries=[alerts,timeline,facets,cases,reviews,investigations];
  const failed=queries.find(q=>q.isError);
  if(failed?.isError)return <ErrorState message={failed.error instanceof ApiClientError?failed.error.message:t("Dashboard konnte nicht geladen werden.","Dashboard could not be loaded.")} onRetry={()=>failed.refetch()}/>;
  if(queries.some(q=>q.isLoading))return <LoadingBlock label={t("Lade Sicherheitsübersicht","Loading security overview")}/>;
- const now=Date.now();
- const recent=(alerts.data?.data??[]).filter(x=>range==="all"||now-new Date(x.detected_at).getTime()<=(range==="24h"?86400000:604800000));
  const severity=(facets.data?.severity??[]).filter(x=>x.count>0).map(x=>({name:x.value,value:x.count,color:COLOR[x.value]||COLOR.unknown}));
  const total=severity.reduce((sum,x)=>sum+x.value,0);
  const critical=severity.filter(x=>x.name==="critical"||x.name==="high").reduce((sum,x)=>sum+x.value,0);
@@ -34,11 +34,6 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
  const runningCases=(cases.data?.data??[]).filter(x=>x.status==="open"||x.status==="investigating").length;
  const pending=reviews.data?.data.length??0;
  const newest=alerts.data?.data[0]?.detected_at;
- const daily=new Map<string,number>();
- const countDays=range==="24h"?1:range==="7d"?7:14;
- for(let i=countDays-1;i>=0;i--){const d=dayKey(new Date(now-i*86400000).toISOString());daily.set(d,0);}
- for(const a of recent){const day=dayKey(a.detected_at);if(daily.has(day))daily.set(day,(daily.get(day)||0)+1);}
- const trend=[...daily].map(([day,count])=>({day:day.slice(5),count}));
  const kpis=[
  {title:t("Sicherheitsmeldungen","Security alerts"),number:total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
  {title:t("Hohe Priorität","High priority"),number:critical.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("High + Critical, keine bestätigten Vorfälle","High + critical, not confirmed incidents"),icon:ShieldAlert,accent:"#ed7386",href:"/alerts"},
@@ -71,13 +66,26 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
   <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,1fr)]">
    <div className="panel rounded-2xl p-5 sm:p-6">
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-     <div><h3 className="text-sm font-bold">{t("Erkennungen im Zeitverlauf","Detection activity")}</h3><p className="mt-1 text-xs text-muted-foreground">{t("Bis zu 100 zuletzt geladene Alerts; kein vollständiger Zeitraum bei hoher Last","Latest 100 alerts only; not a complete window under high volume")}</p></div>
-     <div className="soc-toggle">{(["24h","7d","all"] as const).map(x=><button key={x} aria-pressed={range===x} onClick={()=>setRange(x)}>{x==="all"?t("Alle","All"):x}</button>)}</div>
+     <div><h3 className="text-sm font-bold">{t("Erkennungen im Zeitverlauf","Detection activity")}</h3><p className="mt-1 text-xs text-muted-foreground">{t("Vollständige Datenbankzählung · Europe/Berlin · automatische Aktualisierung alle 60 s","Complete database aggregation · Europe/Berlin · refresh every 60s")}</p></div>
+     <div className="soc-toggle">{(["1h","6h","24h","7d"] as const).map(x=><button key={x} aria-pressed={range===x} onClick={()=>setRange(x)}>{x}</button>)}</div>
     </div>
-    {recent.length?<div className="soc-chart h-[245px] w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend} margin={{top:12,right:5,left:-24,bottom:0}}>
-     <defs><linearGradient id="activityFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#21c6ce" stopOpacity={.28}/><stop offset="95%" stopColor="#21c6ce" stopOpacity={.015}/></linearGradient></defs>
-     <CartesianGrid vertical={false} strokeDasharray="3 5"/><XAxis dataKey="day" fontSize={11} tickLine={false} axisLine={false}/><YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false}/>
-     <Tooltip {...tooltip}/><Area dataKey="count" stroke="#21b7c2" strokeWidth={2.5} fill="url(#activityFill)" type="monotone" dot={false} activeDot={{r:5}}/></AreaChart></ResponsiveContainer></div>:<div className="flex h-[245px] items-center justify-center text-sm text-muted-foreground">{t("Keine Meldungen im ausgewählten Zeitraum","No alerts in selected period")}</div>}
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+     <span className="text-xs text-muted-foreground">{t("Auflösung","Resolution")}: <strong className="text-foreground">{timeline.data?.step_minutes===1?t("1 Minute","1 minute"):timeline.data?.step_minutes===60?t("1 Stunde","1 hour"):`${timeline.data?.step_minutes||0} ${t("Minuten","minutes")}`}</strong></span>
+     <span className="text-xs text-muted-foreground">{t("Meldungen im Zeitraum","Alerts in period")}: <strong className="text-foreground">{(timeline.data?.total||0).toLocaleString(locale==="de"?"de-DE":"en-US")}</strong></span>
+    </div>
+    <div className="soc-chart h-[245px] w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={timeline.data?.data||[]} margin={{top:12,right:5,left:-24,bottom:0}}>
+     <CartesianGrid vertical={false} strokeDasharray="3 5"/>
+     <XAxis dataKey="timestamp" fontSize={11} tickLine={false} axisLine={false} minTickGap={20} tickFormatter={(v:string)=>new Intl.DateTimeFormat(locale==="de"?"de-DE":"en-GB",{timeZone:"Europe/Berlin",hour:"2-digit",minute:"2-digit",...(range==="7d"?{day:"2-digit",month:"2-digit"}:{})}).format(new Date(v))}/>
+     <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false}/>
+     <Tooltip {...tooltip} labelFormatter={(v)=>formatTime(String(v))}/>
+     <Area type="monotone" dataKey="critical" name="Critical" stackId="alerts" stroke={COLOR.critical} fill={COLOR.critical} fillOpacity={.8} dot={false}/>
+     <Area type="monotone" dataKey="high" name="High" stackId="alerts" stroke={COLOR.high} fill={COLOR.high} fillOpacity={.72} dot={false}/>
+     <Area type="monotone" dataKey="medium" name="Medium" stackId="alerts" stroke={COLOR.medium} fill={COLOR.medium} fillOpacity={.65} dot={false}/>
+     <Area type="monotone" dataKey="low" name="Low" stackId="alerts" stroke={COLOR.low} fill={COLOR.low} fillOpacity={.68} dot={false}/>
+     <Area type="monotone" dataKey="informational" name="Info" stackId="alerts" stroke={COLOR.informational} fill={COLOR.informational} fillOpacity={.65} dot={false}/>
+     <Area type="monotone" dataKey="unknown" name="Unknown" stackId="alerts" stroke={COLOR.unknown} fill={COLOR.unknown} fillOpacity={.55} dot={false}/>
+    </AreaChart></ResponsiveContainer></div>
+    <p className="mt-3 text-[11px] text-muted-foreground">{t("Lücken mit null Ereignissen sind enthalten. Jeder Datenpunkt zeigt den Beginn des Intervalls in MEZ/MESZ.","Zero-event buckets are included. Each point shows the start of the interval in CET/CEST.")}</p>
    </div>
    <div className="panel rounded-2xl p-5 sm:p-6">
     <div><h3 className="text-sm font-bold">{t("Verteilung nach Priorität","Severity breakdown")}</h3><p className="mt-1 text-xs text-muted-foreground">{t("Alle gespeicherten Erkennungen","All stored detections")}</p></div>
