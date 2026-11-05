@@ -1,3 +1,4 @@
+import {deriveSecurityPosture} from "@/lib/security-posture";
 import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { neon } from "@neondatabase/serverless";
 
@@ -156,6 +157,7 @@ export async function publicDemoApi(request:Request,path:string[]){
       headers:{"cache-control":"private, no-store"}
     });
   }
+  if(endpoint==="api/v1/security/posture")return Response.json(deriveSecurityPosture([]));
   if(endpoint==="api/v1/search/facets"){
     const alerts=await rows(sql,"alert");
     return Response.json({event_type:facet(alerts,"event_type"),severity:facet(alerts,"severity"),
