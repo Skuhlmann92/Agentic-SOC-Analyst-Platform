@@ -134,8 +134,8 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
   await initLive(sql);
   const endpoint=path.join("/");
   const parts=endpoint.split("/");
-  if(request.method==="POST" && parts.length===6 && parts.slice(0,3).join("/")==="api/v1/alerts" && parts[5]==="status"){
-    const alertId=parts[4];
+  if(request.method==="POST" && parts.length===5 && parts.slice(0,3).join("/")==="api/v1/alerts" && parts[4]==="status"){
+    const alertId=parts[3];
     if(!/^[0-9a-f-]{36}$/i.test(alertId))
       return Response.json({error:{code:"invalid_id",message:"Invalid alert UUID"}},{status:422});
     let body:Record<string,unknown>;
