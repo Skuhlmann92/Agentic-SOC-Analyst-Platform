@@ -1,3 +1,4 @@
+import {deriveSecurityPosture} from "@/lib/security-posture";
 import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
 import { deriveLiveViews } from "@/lib/live-views";
@@ -205,6 +206,7 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
     "SELECT payload FROM soc_live_alerts WHERE tenant_id=$1 ORDER BY detected_at DESC LIMIT 5000",[LIVE_TENANT]
   );
   const alerts=resultRows(result).map(r=>r.payload as Row);
+  if(endpoint==="api/v1/security/posture")return Response.json(deriveSecurityPosture(alerts),{headers:{"cache-control":"private, no-store"}});
   const {cases,investigations,entities}=deriveLiveViews(alerts);
   const url=new URL(request.url), q=url.searchParams;
   const query=value(q.get("q")).toLowerCase();
