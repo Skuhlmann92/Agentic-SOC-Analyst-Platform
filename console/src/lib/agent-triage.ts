@@ -1,3 +1,4 @@
+import {reviewAdvice,reviewGroup} from "@/lib/review-intelligence";
 import { createHash, randomUUID } from "node:crypto";
 import type { neon } from "@neondatabase/serverless";
 
@@ -77,6 +78,48 @@ export async function agentApi(sql:SQL,request:Request,endpoint:string):Promise<
    const run=await buildRun(sql,hits[0].payload as Row);
    return Response.json(run,{status:200});
  }
+ if(request.method==="POST"&&endpoint==="api/v1/agent/drafts/bulk-decisions"){
+   let body:Row;try {const parsed=await request.json();body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:{};}
+   catch{return Response.json({error:{code:"invalid_json",message:"Expected JSON"}},{status:400});}
+   const ids=body.ids,decision=s(body.decision);
+   if(!Array.isArray(ids)||ids.length<2||ids.length>20||
+      ids.some(x=>typeof x!=="string"||!/^[0-9a-f-]{36}$/i.test(x))||new Set(ids).size!==ids.length||
+      !["approved","rejected"].includes(decision))
+     return Response.json({error:{code:"validation_error",message:"Select 2-20 unique valid drafts and a decision"}},{status:422});
+   const rows=items(await sql.query(
+     "SELECT r.id AS run_id,r.payload->'draft' AS draft,a.payload AS alert FROM soc_agent_runs r LEFT JOIN soc_live_alerts a ON a.id=r.alert_id AND a.tenant_id=r.tenant_id WHERE r.tenant_id=$1 AND r.payload->'draft'->>'id'=ANY($2::text[])",
+     [TENANT,ids]));
+   if(rows.length!==ids.length||rows.some(r=>(r.draft as Row)?.status!=="pending_approval"))
+     return Response.json({error:{code:"conflict",message:"Some drafts are missing or already decided"}},{status:409});
+   const groups=rows.map(r=>reviewGroup(r.alert));
+   if(groups.some(g=>!g)||new Set(groups.map(g=>g?.key)).size!==1)
+     return Response.json({error:{code:"mixed_group",message:"Bulk decisions require matching host, rule, source and hour"}},{status:422});
+   const now=new Date().toISOString();
+   const note=s(body.note).trim().slice(0,4000);
+   const intent=decision==="rejected"&&body.intent==="request_changes";
+   const approval={decision,actor:"SOC Administrator",note:intent?`[changes-requested]\n${note}`:note||null,created_at:now};
+   const runIds=rows.map(r=>r.run_id);
+   // Locks, validates and updates ALL members in a single SQL statement.
+   // If any member is no longer pending, none are changed.
+   const changed=items(await sql.query(
+     `WITH locked AS MATERIALIZED (
+        SELECT id,payload FROM soc_agent_runs WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY id FOR UPDATE
+       ), eligible AS (
+        SELECT count(*)::int AS n FROM locked WHERE payload->'draft'->>'status'='pending_approval'
+       )
+       UPDATE soc_agent_runs r
+       SET payload=jsonb_set(jsonb_set(jsonb_set(r.payload,
+         '{draft,status}',to_jsonb($3::text)),
+         '{draft,approval}',$4::jsonb),
+         '{draft,updated_at}',to_jsonb($5::text))
+       FROM locked l WHERE r.tenant_id=$1 AND r.id=l.id
+       AND (SELECT count(*) FROM locked)=$6 AND (SELECT n FROM eligible)=$6
+       RETURNING r.id`,
+     [TENANT,runIds,decision,JSON.stringify(approval),now,ids.length]));
+   if(changed.length!==ids.length)
+     return Response.json({error:{code:"conflict",message:"Queue changed; no bulk decision was recorded"}},{status:409});
+   return Response.json({ok:true,decided:ids.length,ids,decision});
+ }
  if(request.method==="POST"&&endpoint.startsWith("api/v1/agent/drafts/")&&endpoint.endsWith("/decisions")){
    const id=endpoint.split("/")[4];
    let body:Row;try{body=await request.json();}catch{return Response.json({error:{code:"invalid_json",message:"Expected JSON"}},{status:400});}
@@ -112,9 +155,9 @@ export async function agentApi(sql:SQL,request:Request,endpoint:string):Promise<
    // cannot crowd out pending approvals in larger installations.
    const status=q.get("status");
    const draftRows=items(await sql.query(
-     "SELECT payload->'draft' AS draft FROM soc_agent_runs WHERE tenant_id=$1 AND ($2::text IS NULL OR payload->'draft'->>'status'=$2) ORDER BY created_at DESC LIMIT $3",
+     "SELECT r.payload->'draft' AS draft,a.payload AS alert FROM soc_agent_runs r LEFT JOIN soc_live_alerts a ON a.id=r.alert_id AND a.tenant_id=r.tenant_id WHERE r.tenant_id=$1 AND ($2::text IS NULL OR r.payload->'draft'->>'status'=$2) ORDER BY r.created_at DESC LIMIT $3",
      [TENANT,status,limit+1]));
-   const drafts=draftRows.map(x=>x.draft as Row);
+   const drafts=draftRows.map(x=>({...x.draft as Row,review_advice:reviewAdvice(x.draft as Row),review_group:reviewGroup(x.alert)}));
    return Response.json({data:drafts.slice(0,limit),page:{limit,has_more:drafts.length>limit,next_cursor:null}});
  }
  if(endpoint.startsWith("api/v1/agent/runs/")){
