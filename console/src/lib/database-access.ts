@@ -45,6 +45,6 @@ export function databaseUrl(purpose:"read"|"demo_read"|"write"|"ingest"="write")
  if(!legacy)throw new Error("No database URL configured");
  return legacy;
 }
-export function sqlFor(purpose:"read"|"write"|"ingest"="write"){
- return neon(databaseUrl(purpose));
+export function sqlFor(purpose:"read"|"demo_read"|"write"|"ingest"="write"):ReturnType<typeof neon>{
+ return neon(databaseUrl(purpose)) as ReturnType<typeof neon>;
 }
