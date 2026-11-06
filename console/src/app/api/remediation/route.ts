@@ -11,11 +11,7 @@ const isUuid=(x:string)=>/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(x);
 const MODEL=process.env.ANTHROPIC_MODEL||"claude-sonnet-5-5";
 function client(){const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;if(!url)throw Error("DB unavailable");return neon(url);}
 async function admin(){const user=await openSession((await cookies()).get(SESSION_COOKIE)?.value);return user?.role==="admin"&&user.tenantId===LIVE_TENANT&&user.sub===(process.env.SOC_ADMIN_USERNAME||"socadmin");}
-async function init(){
- const sql=client();
- await sql.query("CREATE TABLE IF NOT EXISTS soc_ai_remediations(tenant_id text NOT NULL,id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),hostname text NOT NULL,payload jsonb NOT NULL,PRIMARY KEY(tenant_id,id))");
- return sql;
-}
+async function init(){return client();}
 const fail=(code:string,message:string,status:number)=>Response.json({error:{code,message}},{status});
 const schema={type:"object",additionalProperties:false,properties:{
  summary:{type:"string"},analysis:{type:"string"},risk:{type:"string",enum:["low","medium","high"]},
