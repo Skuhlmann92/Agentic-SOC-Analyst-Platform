@@ -6,8 +6,9 @@ Aktuelle technische Bestandsaufnahme und Prüfergebnisse: [COMMERCIAL_READINESS_
 - [x] Additive Neon-Datenmodelle für Organisation, Mitglieder, Connectoren, Agent-Zuordnung, Audit, Tarife (149/349/699 EUR) und inaktive Subscriptions; bestehende Records unberührt.
 - [x] Live/Demo-API-Grenze im Code fail-closed für unbekannte Mandanten; private Live-API prüft aktive Org-Mitgliedschaft. Session-Secret und Test-Account-Absicherung, Login-Throttle, API-Origin-Prüfung, Browser-Sicherheitsheader.
 - [x] Automatisierte Rollen-/Tenant-Grenztests und Next-Produktionsbuild als CI-Workflow.
-- [ ] **Release-Blocker:** Vercel API HTTP 402 (kostenloses Tageskontingent >100 Deployments). Neuesten P0-Commit nach Freigabe des Kontingents deployen; URL/API/Release-SHA verifizieren.
-- [ ] **Pflicht vor Kundenbetrieb:** PostgreSQL Row-Level Security + Least-Privilege DB-Rollen, vollständige Tenant-ID/Connector-Token-Zuordnung, echte Benutzer/Mitgliedschaften/Einladungen, Datenbank-Migrationstests und E2E-Tests.
+- [ ] **Release-Verifikation:** Das frühere Vercel-Tageslimit (HTTP 402) hat neue Releases blockiert; automatische Deployments laufen inzwischen wieder an. Neuesten SHA auf der Produktionsdomain, authentifizierte Dashboard-Abfragen und alle P0-Schutzmaßnahmen vollständig prüfen.
+- [x] **RLS-Staging auf Neon:** 15 mandantenbezogene SOC-Tabellen mit RLS versehen. NOLOGIN/NOBYPASSRLS/NOINHERIT-Testrollen sind per SELECT-Policy an jeweils nur einen Bestandsmandanten gebunden. Getrennte Transaktionstests: 46 Demo-Records, 827 Live-Alerts und zwei Live-Inventare sichtbar; fremde Tabellen verweigert, fremde Zeilen 0, Schreibrechte 0.
+- [ ] **Kritisch vor Kundenbetrieb:** Die produktive Verbindung verwendet weiterhin `neondb_owner` (BYPASSRLS); daher RLS für Produktions-App noch NICHT durchgesetzt. Sichere tenant-spezifische Service-Credentials/DB-Rollen, echte Membership- und Ingest-Zuordnung, API-Schreibrechte, Rollback und E2E-Tests sind weiterhin erforderlich. Kein Kunden-Onboarding freigeben.
 - [ ] Next.js package-lock reparieren; CI von temporärem npm install zurück auf reproduzierbares npm ci.
 - [ ] End-to-End Claude/Wazuh-Syscollector-Sicherheit, Datenvollständigkeit, Secrets/Dependency Scanning, Backup- und Restore-Tests, Logging/Retention/DSGVO.
 
