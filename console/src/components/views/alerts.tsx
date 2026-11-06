@@ -47,6 +47,7 @@ export function AlertsView() {
     [q, severity, source, status, host,ruleId,ruleLevel,technique,from,to,eventType, sort, cursor],
   );
   const alerts = useQuery({ queryKey: ["alerts", params], queryFn: () => sdk.searchAlerts(params) });
+  const correlated = useQuery({queryKey:["alert-groups"],queryFn:()=>sdk.alertGroups()});
   const facets = useQuery({
     queryKey: ["alert-facets", { q, severity, source, eventType }],
     queryFn: () => sdk.facets({ q, severity, source, event_type: eventType }),
@@ -99,6 +100,32 @@ export function AlertsView() {
           <input className="field" value={technique} placeholder="MITRE ATT&CK ID (T1059)" onChange={e=>{setTechnique(e.target.value);resetPage();}}/>
         </div>
       </div>
+      {correlated.data?.data?.length ? (
+        <section className="panel mb-4 rounded-xl p-4">
+          <h2 className="mb-1 text-sm font-semibold">{t("Korrelierte Alarmgruppen","Correlated alert groups")}</h2>
+          <p className="mb-3 text-xs text-muted-foreground">{t(
+            "Unbestätigte Zusammenhänge aus den letzten sieben Tagen (gleicher Host, gleiche Regel, Quelle und Stunde). Keine automatisch erstellten Incidents.",
+            "Unconfirmed correlations over seven days (same host, rule, source and hour). Not auto-created incidents."
+          )}</p>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {correlated.data.data.slice(0,12).map(group=>(
+              <button type="button" key={`${group.host}:${group.rule_id}:${group.source}:${group.bucket}`}
+                className="rounded border border-border p-3 text-left text-sm hover:bg-white/5"
+                onClick={()=>{
+                  const start=Date.parse(group.bucket);
+                  if(!Number.isFinite(start))return;
+                  setHost(group.host);setRuleId(group.rule_id);setSource(group.source);
+                  setFrom(new Date(start).toISOString());setTo(new Date(start+3600000).toISOString());
+                  resetPage();
+                }}>
+                <span className="block font-semibold">{group.count} Alerts · {group.host}</span>
+                <span className="block text-xs text-muted-foreground">Rule {group.rule_id} · {group.source} · {formatTime(group.bucket)}</span>
+                <span className="mt-1 block text-xs text-accent">{t("Gruppe untersuchen","Investigate group")}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ):null}
       <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-4">
           <FacetGroup title={t("Priorität","Severity")} buckets={facets.data?.severity} active={severity} onPick={(value) => { setSeverity(value === severity ? "" : value); resetPage(); }} />
