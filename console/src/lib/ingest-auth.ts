@@ -2,7 +2,7 @@ import {createHash,timingSafeEqual} from "node:crypto";
 import {neon} from "@neondatabase/serverless";
 import {LEGACY_LIVE_TENANT} from "@/lib/tenant-policy";
 
-type Credential={tenantId:string;connectorId:string|null;kind:"legacy"|"connector";allowedAgentIds:readonly string[]};
+type Credential={tenantId:string;connectorId:string|null;kind:"legacy"|"connector";sourceType:"wazuh"|"edr"|null;allowedAgentIds:readonly string[]};
 /** Server-derived identity only. Never use tenant/source claims provided in an alert. */
 export async function authenticateIngest(authorization:string|null):Promise<Credential|null>{
  if(!authorization?.startsWith("Bearer "))return null;
@@ -12,7 +12,7 @@ export async function authenticateIngest(authorization:string|null):Promise<Cred
  if(legacy){
   const left=Buffer.from(presented),right=Buffer.from(legacy);
   if(left.length===right.length&&timingSafeEqual(left,right)){
-   return {tenantId:LEGACY_LIVE_TENANT,connectorId:null,kind:"legacy",allowedAgentIds:[]};
+   return {tenantId:LEGACY_LIVE_TENANT,connectorId:null,kind:"legacy",sourceType:null,allowedAgentIds:[]};
   }
  }
  // Disabled until all write paths and DB credential isolation have been verified.
@@ -22,7 +22,7 @@ export async function authenticateIngest(authorization:string|null):Promise<Cred
  try{
   const sql=neon(db),hash=createHash("sha256").update(presented).digest("hex");
   const records=await sql.query(
-   `SELECT c.org_id::text AS org_id,c.connector_id::text AS connector_id
+   `SELECT c.org_id::text AS org_id,c.connector_id::text AS connector_id,k.connector_type
       FROM public.soc_ingest_credentials c
       JOIN public.soc_organizations o ON o.id=c.org_id
       JOIN public.soc_org_connectors k ON k.id=c.connector_id AND k.org_id=c.org_id
@@ -37,7 +37,7 @@ export async function authenticateIngest(authorization:string|null):Promise<Cred
    [record.org_id,record.connector_id]);
   if(!agents.length)return null;
   return {tenantId:String(record.org_id),connectorId:String(record.connector_id),
-   kind:"connector",allowedAgentIds:agents.map(x=>String(x.external_agent_id))};
+   kind:"connector",sourceType:record.connector_type==="wazuh"?"wazuh":"edr",allowedAgentIds:agents.map(x=>String(x.external_agent_id))};
  }catch(error){
   console.error("Ingest authentication unavailable",error instanceof Error?error.name:"unknown");
   return null;
