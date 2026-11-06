@@ -10,7 +10,7 @@ type RecordRow = Record<string, unknown>;
 type Sql = ReturnType<typeof neon>;
 
 function connection(): Sql {
- return sqlFor(process.env.NODE_ENV==="production"?"read":"write");
+ return sqlFor(process.env.NODE_ENV==="production"?"demo_read":"write");
 }
 
 function time(index: number) {
