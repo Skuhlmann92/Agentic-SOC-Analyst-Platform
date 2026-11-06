@@ -80,7 +80,7 @@ export type Normalized = {
 export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIVE_TENANT): Normalized {
   const raw=obj(payload),rule=obj(raw.rule),agent=obj(raw.agent),data=obj(raw.data);
   const event=obj(raw.event),host=obj(raw.host),mitre=obj(rule.mitre);
-  const originalSource=value(raw.source)||sourceHint||"edr";
+  const originalSource=tenantId===LIVE_TENANT?(value(raw.source)||sourceHint||"edr"):sourceHint;
   const source = /wazuh/i.test(originalSource) ? "wazuh" : originalSource.slice(0,64);
   const title=(value(rule.description)||value(raw.title)||value(event.action)||value(raw.message)||"Security detection").slice(0,320);
   const timestamp=value(raw.timestamp)||value(raw["@timestamp"])||value(raw.detected_at)||new Date().toISOString();
