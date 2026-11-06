@@ -190,6 +190,14 @@ export type Draft = {
 };
 
 export type DraftSummary = {
+  review_advice?: {
+    kind: "escalate" | "investigate";
+    title: string;
+    reason: string;
+    evidence: Array<{kind:string;record_id:string}>;
+    method: "rules_v1";
+  };
+  review_group?: {key:string;label:string} | null;
   id: string;
   run_id: string;
   status: string;

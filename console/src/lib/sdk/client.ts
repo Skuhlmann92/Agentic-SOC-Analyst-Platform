@@ -66,6 +66,10 @@ export async function platform<T>(path: string, init?: RequestInit): Promise<T> 
 
 export const sdk = {
   searchAlerts: (params: QueryParams) => platform<Page<AlertHit>>(`api/v1/search/alerts${search(params)}`),
+  alertGroups: () => platform<{data:Array<{
+    host:string;rule_id:string;source:string;bucket:string;count:number;
+    first_seen:string;last_seen:string;sample_id:string
+  }>;method:string;notice:string}>("api/v1/search/alert-groups"),
   getAlert: (id: string) => platform<Alert>(`api/v1/alerts/${id}`),
   searchEvents: (params: QueryParams) => platform<Page<Record<string, unknown>>>(`api/v1/search/events${search(params)}`),
   getEvent: (id: string) => platform<EventDetail>(`api/v1/events/${id}`),
@@ -88,6 +92,8 @@ export const sdk = {
   getDraft: (id: string) => platform<Draft>(`api/v1/agent/drafts/${id}`),
   decide: (id: string, body: { decision: "approved" | "rejected"; note?: string; intent?: "request_changes" }) =>
     platform<Draft>(`api/v1/agent/drafts/${id}/decisions`, { method: "POST", body: JSON.stringify(body) }),
+  bulkDecide: (body: { ids:string[]; decision:"approved"|"rejected"; note?:string; intent?:"request_changes" }) =>
+    platform<{ok:boolean;decided:number;ids:string[];decision:string}>("api/v1/agent/drafts/bulk-decisions", { method:"POST", body:JSON.stringify(body) }),
   connectors: () => platform<{ data: Connector[] }>("api/v1/operations/connectors"),
   deadLetters: (params: QueryParams) => platform<Page<DeadLetter>>(`api/v1/operations/dead-letters${search(params)}`),
   publications: (params: QueryParams) =>
