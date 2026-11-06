@@ -20,6 +20,15 @@ Audit date: 2026-11-05 (Europe/Berlin). Scope: existing Vercel Next.js console, 
 - Additive PostgreSQL tables: organizations, memberships, connector definitions, agent mappings, subscription plans/subscriptions, organization audit, login throttle. Legacy live and public demo orgs seeded; original SOC records not modified.
 - The Essential / Professional / Business catalog is seeded as 14900/34900/69900 euro cents monthly, limits 15/50/150 endpoints respectively. NO active subscription, Stripe account connection, payment charge or external service enabled.
 
+## P0 RLS migration — 2026-11-06
+- Added `console/db/migrations/002_tenant_rls_canary.sql` and `003_expand_rls_tenant_tables.sql`.
+- On the existing Neon branch, enabled RLS on **15 tenant-bearing SOC tables** without `FORCE ROW LEVEL SECURITY`. This does **not** alter rows or revoke production owner access.
+- Created two `NOLOGIN NOBYPASSRLS NOINHERIT` canary roles with separate read-only privileges and explicit legacy-live/demo policies.
+- Verified in transaction-scoped `SET LOCAL ROLE` tests: demo-only access to 46 demo records, live-only access to 827 live alerts and two endpoint inventories; both see only their own organization; 0 cross-tenant rows; denied attempts to read the opposite tenant's table; INSERT/UPDATE/DELETE privileges absent.
+- Canary role membership was granted to the database owner for controlled testing. Do not hand canary privileges to external parties or use them as application credentials.
+- **Critical remaining risk:** `neondb_owner` is `BYPASSRLS` and is still the serverless application's production database connection. Therefore this is a proven RLS canary, **not production customer isolation**. Move to scoped non-owner database identities, test API reads/writes/ingest per tenant and customer invitations, and only then mark RLS P0 complete.
+- Automated application tests and Next builds were green on the latest tested migration commit; see GitHub Actions. A live authenticated browser E2E session was not exercised.
+
 ## P0 blocking items BEFORE onboarding external paying customers
 1. **Release blocker:** publish latest security changes to Vercel when deployment quota/plan allows, verify release SHA and protected API responses. No paid plan changes without approval.
 2. **True PostgreSQL tenant isolation:** introduce least-privileged service roles and row-level security, transaction-scoped tenant context, tenant-scoped ingest credentials and encrypted secrets; verify malicious cross-tenant read/write attempts against DB and APIs. The current DB owner still has broad database access. The current production ingest token is single-tenant.
