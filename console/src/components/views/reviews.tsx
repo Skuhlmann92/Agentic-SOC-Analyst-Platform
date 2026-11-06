@@ -145,7 +145,7 @@ export function ReviewsView() {
               {!validBulk?<p className="mt-1 text-xs text-danger">Select at least two matching pending approvals (max 20).</p>:null}
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button disabled={!validBulk||bulk.isPending||decide.isPending} onClick={()=>{
-                  if(window.confirm(`Approve ${bulkIds.length} selected drafts? Each receives an individual audited decision.`))bulk.mutate("approved");
+                  if(window.confirm(`Approve ${bulkIds.length} selected drafts? Each draft receives a separately recorded decision.`))bulk.mutate("approved");
                 }}>Approve selected</Button>
                 <Button variant="danger" disabled={!validBulk||bulk.isPending||decide.isPending} onClick={()=>{
                   if(window.confirm(`Reject ${bulkIds.length} selected drafts?`))bulk.mutate("rejected");
