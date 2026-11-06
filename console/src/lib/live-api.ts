@@ -1,3 +1,4 @@
+import {sqlFor} from "@/lib/database-access";
 import {deduplicationNamespace} from "@/lib/ingest-policy";
 import {deriveSecurityPosture} from "@/lib/security-posture";
 import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
@@ -10,10 +11,8 @@ export const LIVE_TENANT = "22222222-2222-4222-8222-222222222222";
 type Row = Record<string, unknown>;
 type NeonSql = ReturnType<typeof neon>;
 
-function sqlClient(): NeonSql {
-  const url = process.env.POSTGRES_DATABASE_URL || process.env.POSTGRES_URL;
-  if (!url) throw new Error("Missing Neon connection URL");
-  return neon(url);
+function sqlClient(purpose:"read"|"write"|"ingest"="write"):NeonSql{
+ return sqlFor(purpose);
 }
 function resultRows(result: Awaited<ReturnType<NeonSql["query"]>>): Row[] {
   return Array.isArray(result) ? result as Row[] : [];
@@ -115,7 +114,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIV
 // Existing tables and indexes were verified in Neon before removing runtime DDL.
 export async function initLive(_sql: NeonSql): Promise<void> { return; }
 export async function ingestEvents(events: unknown[], source: string,tenantId=LIVE_TENANT): Promise<{accepted:number;duplicates:number}> {
-  const sql=sqlClient();
+  const sql=sqlClient("ingest");
   await initLive(sql);
   let accepted=0,duplicates=0;
   for(const raw of events){
@@ -145,7 +144,7 @@ function bucket(rows:Row[],field:string) {
   return [...values].map(([value,count])=>({value,count}));
 }
 export async function liveApi(request:Request,path:string[],actor="SOC Administrator"):Promise<Response> {
-  const sql=sqlClient();
+  const sql=sqlClient(request.method==="GET"?"read":"write");
   await initLive(sql);
   const endpoint=path.join("/");
   const parts=endpoint.split("/");
