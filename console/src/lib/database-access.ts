@@ -12,10 +12,15 @@ import {neon} from "@neondatabase/serverless";
  * SOC_READ_DB_ENABLED is intentionally false unless explicitly set to true.
  * Once enabled, a missing read credential is a hard error, not fallback to owner.
  */
-export function databaseUrl(purpose:"read"|"write"|"ingest"="write"):string{
+export function databaseUrl(purpose:"read"|"demo_read"|"write"|"ingest"="write"):string{
  if(purpose==="read"&&process.env.SOC_READ_DB_ENABLED==="true"){
   const url=process.env.SOC_READ_DATABASE_URL;
   if(!url)throw new Error("SOC_READ_DB_ENABLED requires SOC_READ_DATABASE_URL");
+  return url;
+ }
+ if(purpose==="demo_read"&&process.env.SOC_READ_DB_ENABLED==="true"){
+  const url=process.env.SOC_DEMO_READ_DATABASE_URL;
+  if(!url)throw new Error("SOC_READ_DB_ENABLED requires SOC_DEMO_READ_DATABASE_URL for public demo");
   return url;
  }
  if(purpose==="ingest"&&process.env.SOC_INGEST_DB_ENABLED==="true"){
