@@ -35,6 +35,16 @@ CREATE TABLE IF NOT EXISTS public.soc_endpoint_heartbeats (
  received_at timestamptz NOT NULL DEFAULT now(),payload jsonb NOT NULL,
  PRIMARY KEY(tenant_id,hostname)
 );
+CREATE TABLE IF NOT EXISTS public.soc_endpoint_inventory (
+ tenant_id text NOT NULL,hostname text NOT NULL,
+ received_at timestamptz NOT NULL DEFAULT now(),payload jsonb NOT NULL,
+ PRIMARY KEY(tenant_id,hostname)
+);
+CREATE TABLE IF NOT EXISTS public.soc_remediation_assessments (
+ tenant_id text NOT NULL,remediation_id uuid NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),payload jsonb NOT NULL,
+ PRIMARY KEY(tenant_id,remediation_id)
+);
 CREATE TABLE IF NOT EXISTS public.soc_remediation_audit (
  id uuid PRIMARY KEY,tenant_id text NOT NULL,remediation_id uuid NOT NULL,
  action text NOT NULL,reviewer text NOT NULL,note text,recorded_at timestamptz NOT NULL DEFAULT now()
