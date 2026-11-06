@@ -87,7 +87,7 @@ export async function agentApi(sql:SQL,request:Request,endpoint:string):Promise<
    if(draft.status!=="pending_approval")return Response.json({error:{code:"conflict",message:"Draft already decided"}},{status:409});
    const requestChanges=decision==="rejected"&&body.intent==="request_changes";
    const note=s(body.note).trim().slice(0,4000);
-   const recordedNote=requestChanges?`[changes-requested]\\n${note}`:note||null;
+   const recordedNote=requestChanges?`[changes-requested]\n${note}`:note||null;
    const now=new Date().toISOString();
    const updated={...draft,status:decision,updated_at:now,
      approval:{decision,actor:"SOC Administrator",note:recordedNote,created_at:now}};
