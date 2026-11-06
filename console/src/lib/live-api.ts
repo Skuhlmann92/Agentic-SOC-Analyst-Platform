@@ -77,7 +77,7 @@ export type Normalized = {
   canonical_event_id: string; event_id: string;
   event_message: string; event_outcome: string; srcip: string | null;
 };
-export function normalizeEvent(payload: unknown, sourceHint: string): Normalized {
+export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIVE_TENANT): Normalized {
   const raw=obj(payload),rule=obj(raw.rule),agent=obj(raw.agent),data=obj(raw.data);
   const event=obj(raw.event),host=obj(raw.host),mitre=obj(rule.mitre);
   const originalSource=value(raw.source)||sourceHint||"edr";
@@ -88,13 +88,14 @@ export function normalizeEvent(payload: unknown, sourceHint: string): Normalized
   const at=Number.isNaN(date.getTime())?new Date().toISOString():date.toISOString();
   const hostName=value(agent.name)||value(host.name)||value(raw.hostname)||value(raw.device_name)||"unknown";
   const idRaw=value(raw.id)||value(raw.external_id)||value(raw.event_id);
-  const key=idRaw ? `${source}:${idRaw}` : `${source}:${createHash("sha256").update(JSON.stringify(raw)).digest("hex")}`;
+  const keyPrefix=tenantId===LIVE_TENANT?source:`${tenantId}:${source}`;
+  const key=idRaw ? `${keyPrefix}:${idRaw}` : `${keyPrefix}:${createHash("sha256").update(JSON.stringify(raw)).digest("hex")}`;
   const id=uuidFromKey(key);
   const level=Number(rule.level)||Number(raw.rule_level)||0;
   const technique_ids = (Array.isArray(mitre.id) ? mitre.id : mitre.id ? [mitre.id] : (Array.isArray(raw.technique_ids)?raw.technique_ids:[]))
     .map(value).filter(Boolean).slice(0,12);
   return {
-    id,tenant_id:LIVE_TENANT,source,external_id:idRaw||key.slice(0,100),title,
+    id,tenant_id:tenantId,source,external_id:idRaw||key.slice(0,100),title,
     description:(value(raw.description)||value(raw.message)||title).slice(0,2000),
     severity:severity(raw.severity,level),status:"new",
     rule_id:value(rule.id)||null,rule_level:Number.isFinite(level)?level:null,rule_name:value(rule.description)||title,
@@ -127,18 +128,18 @@ export async function initLive(sql: NeonSql): Promise<void> {
     action text NOT NULL, actor text NOT NULL, recorded_at timestamptz NOT NULL DEFAULT NOW()
   )`);
 }
-export async function ingestEvents(events: unknown[], source: string): Promise<{accepted:number;duplicates:number}> {
+export async function ingestEvents(events: unknown[], source: string,tenantId=LIVE_TENANT): Promise<{accepted:number;duplicates:number}> {
   const sql=sqlClient();
   await initLive(sql);
   let accepted=0,duplicates=0;
   for(const raw of events){
-    const row=normalizeEvent(raw,source);
+    const row=normalizeEvent(raw,source,tenantId);
     const res=await sql.query(
       `INSERT INTO soc_live_alerts (tenant_id,id,external_id,source,severity,status,detected_at,payload)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT DO NOTHING RETURNING id`,
-      [LIVE_TENANT,row.id,row.external_id,row.source,row.severity,row.status,row.detected_at,JSON.stringify(row)]
+      [tenantId,row.id,row.external_id,row.source,row.severity,row.status,row.detected_at,JSON.stringify(row)]
     );
-    if(resultRows(res).length) { accepted++; try { await analyzeNewAlert(sql,row as unknown as Row); } catch(error) { console.error("SOC automated triage failed", error instanceof Error ? error.message : "unknown"); } } else duplicates++;
+    if(resultRows(res).length) { accepted++; if(tenantId===LIVE_TENANT){try { await analyzeNewAlert(sql,row as unknown as Row); } catch(error) { console.error("SOC automated triage failed", error instanceof Error ? error.message : "unknown"); }} } else duplicates++;
   }
   return {accepted,duplicates};
 }
