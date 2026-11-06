@@ -1,5 +1,5 @@
+import {sqlFor} from "@/lib/database-access";
 import {randomUUID} from "node:crypto";
-import {neon} from "@neondatabase/serverless";
 import {cookies} from "next/headers";
 import {openSession,SESSION_COOKIE} from "@/lib/session-token";
 import {LIVE_TENANT} from "@/lib/live-api";
@@ -9,9 +9,9 @@ const asRows=(x:unknown):Row[]=>Array.isArray(x)?x as Row[]:[];
 const s=(x:unknown)=>typeof x==="string"?x:"";
 const isUuid=(x:string)=>/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(x);
 const MODEL=process.env.ANTHROPIC_MODEL||"claude-sonnet-5-5";
-function client(){const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;if(!url)throw Error("DB unavailable");return neon(url);}
+function client(purpose:"read"|"write"="write"){return sqlFor(purpose);}
 async function admin(){const user=await openSession((await cookies()).get(SESSION_COOKIE)?.value);return user?.role==="admin"&&user.tenantId===LIVE_TENANT&&user.sub===(process.env.SOC_ADMIN_USERNAME||"socadmin");}
-async function init(){return client();}
+async function init(purpose:"read"|"write"="write"){return client(purpose);}
 const fail=(code:string,message:string,status:number)=>Response.json({error:{code,message}},{status});
 const schema={type:"object",additionalProperties:false,properties:{
  summary:{type:"string"},analysis:{type:"string"},risk:{type:"string",enum:["low","medium","high"]},
@@ -31,7 +31,7 @@ function safetyFlags(code:string){
 export async function GET(){
  if(!await admin())return fail("unauthorized","Admin login required",401);
  try{
- const sql=await init();
+ const sql=await init("read");
  const [previous,hosts]=await Promise.all([
  sql.query("SELECT payload FROM soc_ai_remediations WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 25",[LIVE_TENANT]),
  sql.query("SELECT payload->>'hostname' AS hostname,COUNT(*)::int AS count FROM soc_live_alerts WHERE tenant_id=$1 AND source='wazuh' AND jsonb_typeof(payload->'rule_level')='number' AND (payload->>'rule_level')::int BETWEEN 0 AND 6 AND payload->>'hostname' IS NOT NULL GROUP BY payload->>'hostname' ORDER BY count DESC LIMIT 20",[LIVE_TENANT])]);
