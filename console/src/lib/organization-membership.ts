@@ -1,3 +1,4 @@
+import {sqlFor} from "@/lib/database-access";
 import {neon} from "@neondatabase/serverless";
 import {LEGACY_LIVE_TENANT} from "@/lib/tenant-policy";
 
@@ -8,10 +9,8 @@ import {LEGACY_LIVE_TENANT} from "@/lib/tenant-policy";
  */
 export async function verifyLegacyAdminMembership(principalId:string):Promise<boolean>{
  if(!principalId)return false;
- const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;
- if(!url)return false;
  try{
-  const sql=neon(url);
+  const sql=sqlFor("read");
   const result=await sql.query(
    `SELECT 1 FROM public.soc_org_memberships m
       JOIN public.soc_organizations o ON o.id=m.org_id
