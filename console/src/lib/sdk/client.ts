@@ -88,6 +88,8 @@ export const sdk = {
   getDraft: (id: string) => platform<Draft>(`api/v1/agent/drafts/${id}`),
   decide: (id: string, body: { decision: "approved" | "rejected"; note?: string; intent?: "request_changes" }) =>
     platform<Draft>(`api/v1/agent/drafts/${id}/decisions`, { method: "POST", body: JSON.stringify(body) }),
+  bulkDecide: (body: { ids:string[]; decision:"approved"|"rejected"; note?:string; intent?:"request_changes" }) =>
+    platform<{ok:boolean;decided:number;ids:string[];decision:string}>("api/v1/agent/drafts/bulk-decisions", { method:"POST", body:JSON.stringify(body) }),
   connectors: () => platform<{ data: Connector[] }>("api/v1/operations/connectors"),
   deadLetters: (params: QueryParams) => platform<Page<DeadLetter>>(`api/v1/operations/dead-letters${search(params)}`),
   publications: (params: QueryParams) =>
