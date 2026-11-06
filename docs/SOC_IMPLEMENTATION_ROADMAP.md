@@ -2,6 +2,14 @@
 
 Aktuelle technische Bestandsaufnahme und Prüfergebnisse: [COMMERCIAL_READINESS_AUDIT.md](./COMMERCIAL_READINESS_AUDIT.md).
 
+## Release-Stand 06.11.2026
+- [x] Runtime-DDL-Bereinigung, separates `database-access.ts`, eigene Live-/Demo-Leser und Ingest-Zugangsrouten im Code; Testfälle gegen Schemaänderungen im Requestpfad und fehlerhaft konfigurierte URLs.
+- [x] Neon-Kandidatentest: read-only Rolle liest 858 Live-Alerts, zwei Inventare, eine aktive Mitgliedschaft, Agentenläufe und Heartbeats; geprüfte RLS-Rechte unverändert.
+- [x] GitHub Actions: neue DB-/RLS-/Mandanten- und Ingest-Tests sowie Next.js-Produktionsbuild erfolgreich (Commit `a568fe2d`).
+- [ ] **Aktueller Release-Blocker:** Manuelle Veröffentlichung des neuesten GitHub-Standes von Vercel mit HTTP 402 `api-deployments-free-per-day` verweigert. Nicht als live markieren. Keine kostenpflichtige Freischaltung ohne ausdrückliche Genehmigung.
+- [ ] **Vor Umschaltung** aktuelle Server-Owner-Verbindung durch tatsächlich eingeschränkte LOGIN-Rollen ersetzen, deren Rechte und API-Zugriffe im Staging prüfen; danach reproduzierbaren End-to-End-Test und Rollback durchführen.
+- [ ] `docs/DB_ACCESS_CUTOVER.md` als verbindlichen Prüfkatalog benutzen.
+
 ## P0 — Sicherheit / Datenintegrität / Mandantentrennung
 - [x] Additive Neon-Datenmodelle für Organisation, Mitglieder, Connectoren, Agent-Zuordnung, Audit, Tarife (149/349/699 EUR) und inaktive Subscriptions; bestehende Records unberührt.
 - [x] Live/Demo-API-Grenze im Code fail-closed für unbekannte Mandanten; private Live-API prüft aktive Org-Mitgliedschaft. Session-Secret und Test-Account-Absicherung, Login-Throttle, API-Origin-Prüfung, Browser-Sicherheitsheader.
