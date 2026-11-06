@@ -23,9 +23,6 @@ export async function POST(request:Request){
  if(!database)return Response.json({error:{message:"Database unavailable"}},{status:503});
  try{
   const sql=neon(database);
-  await sql.query(`CREATE TABLE IF NOT EXISTS soc_remediation_audit(
-    id uuid PRIMARY KEY,tenant_id text NOT NULL,remediation_id uuid NOT NULL,
-    action text NOT NULL,reviewer text NOT NULL,note text,recorded_at timestamptz NOT NULL DEFAULT now())`);
   const current=rows(await sql.query("SELECT payload FROM soc_ai_remediations WHERE tenant_id=$1 AND id=$2",[LIVE_TENANT,id]));
   if(!current.length)return Response.json({error:{message:"Draft not found"}},{status:404});
   const draft=current[0].payload as Row;
