@@ -1,5 +1,5 @@
+import {sqlFor} from "@/lib/database-access";
 import {cookies} from "next/headers";
-import {neon} from "@neondatabase/serverless";
 import {openSession,SESSION_COOKIE} from "@/lib/session-token";
 import {LIVE_TENANT} from "@/lib/live-api";
 import {deriveLiveViews} from "@/lib/live-views";
@@ -8,12 +8,10 @@ type Row=Record<string,unknown>;
 const rows=(r:unknown):Row[]=>Array.isArray(r)?r as Row[]:[];
 const s=(x:unknown)=>typeof x==="string"?x:"";
 const reject=(message:string,status:number)=>Response.json({error:{message}},{status});
-async function context(){
+async function context(purpose:"read"|"write"="write"){
  const session=await openSession((await cookies()).get(SESSION_COOKIE)?.value);
  if(session?.role!=="admin"||session.tenantId!==LIVE_TENANT)return null;
- const database=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;
- if(!database)return null;
- return neon(database);
+ return sqlFor(purpose);
 }
 export async function POST(req:Request){
  const sql=await context();if(!sql)return reject("Admin session or database unavailable",401);
@@ -71,7 +69,7 @@ export async function POST(req:Request){
  return Response.json(response);
 }
 export async function GET(req:Request){
- const sql=await context();if(!sql)return reject("Admin session required",401);
+ const sql=await context("read");if(!sql)return reject("Admin session required",401);
  const id=new URL(req.url).searchParams.get("case_id")||"";
  if(!/^[0-9a-f-]{36}$/i.test(id))return reject("Valid case ID required",422);
  try {
