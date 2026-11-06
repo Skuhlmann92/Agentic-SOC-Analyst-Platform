@@ -1,19 +1,16 @@
-import {timingSafeEqual,createHash} from "node:crypto";
+import {sqlFor} from "@/lib/database-access";
+import {timingSafeEqual} from "node:crypto";
 import {cookies} from "next/headers";
-import {neon} from "@neondatabase/serverless";
 import {openSession,SESSION_COOKIE} from "@/lib/session-token";
 import {LIVE_TENANT} from "@/lib/live-api";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const DB=()=>{const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;if(!url)throw Error("No database");return neon(url);};
+const DB=(purpose:"read"|"write"="write")=>sqlFor(purpose);
 type R=Record<string,unknown>;
 const rows=(v:unknown):R[]=>Array.isArray(v)?v as R[]:[];
 const s=(v:unknown)=>typeof v==="string"?v:"";
 const fail=(status:number,message:string)=>Response.json({error:{message}},{status});
 function match(a:string,b:string|undefined){if(!a||!b)return false;const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
-async function prepare(sql:ReturnType<typeof DB>){
- await sql.query("CREATE TABLE IF NOT EXISTS soc_endpoint_inventory (tenant_id text NOT NULL,hostname text NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),payload jsonb NOT NULL, PRIMARY KEY(tenant_id,hostname))");
-}
 export async function POST(req:Request){
  const token=(req.headers.get("authorization")||"").replace(/^Bearer /,"");
  const hostname=match(token,process.env.SOC_HEARTBEAT_PI_TOKEN)?"Homelab":match(token,process.env.SOC_HEARTBEAT_WIN_TOKEN)?"DESKTOP-VKES2QF":null;
@@ -41,7 +38,7 @@ export async function POST(req:Request){
  software,software_count:software.length,collection_scope:s(body.collection_scope).slice(0,180),
  received_at:new Date().toISOString(),complete:body.complete===true};
  try{
-  const sql=DB();await prepare(sql);
+  const sql=DB();
   await sql.query("INSERT INTO soc_endpoint_inventory(tenant_id,hostname,payload) VALUES($1,$2,$3::jsonb) ON CONFLICT(tenant_id,hostname) DO UPDATE SET received_at=now(),payload=excluded.payload",
    [LIVE_TENANT,hostname,JSON.stringify(value)]);
   return Response.json({ok:true,hostname,software_count:software.length});
@@ -51,7 +48,7 @@ export async function GET(req:Request){
  const session=await openSession((await cookies()).get(SESSION_COOKIE)?.value);
  if(session?.role!=="admin"||session.tenantId!==LIVE_TENANT)return fail(401,"Administrator login required");
  try{
-  const sql=DB();await prepare(sql);
+  const sql=DB("read");
   const requested=new URL(req.url).searchParams.get("host")||"";
   const result=rows(await sql.query("SELECT hostname,received_at,payload FROM soc_endpoint_inventory WHERE tenant_id=$1 ORDER BY hostname",[LIVE_TENANT]));
   const items:R[]=result.map(x=>({...((x.payload && typeof x.payload==="object")?x.payload as R:{}),received_at:x.received_at}));
