@@ -1,17 +1,35 @@
 # Agentic SOC Analyst Platform — Product & UX Roadmap
 
-Updated: 2026-11-06. Source of truth for this change: PR for `feature/smart-review-bulk-grouping`.
+Updated: 2026-11-06. Features #3–#5 were merged and deployed via PR #3. Subsequent UX and localization work is tracked below.
 
-## Implemented in this branch (requires CI and merge)
+## Implemented in production (merged into main)
 
 - **#3 Evidence-based review recommendation**: Every pending draft in the review queue carries a deterministic recommendation (`rules_v1`) with cited stored evidence and an explanation. **Not yet an LLM verdict**: confidence percentages or "false positive" conclusions are intentionally not invented. Human approval is mandatory.
 - **#4 Bulk review decisions**: Select 2–20 pending drafts of the same correlation group. The server verifies the group and atomically commits all draft transitions or none. Confirmation is explicit; there is no script execution or automatic remediation.
 - **#5 Correlated alert groups**: Read-only group proposals based on identical host, rule, source and one-hour UTC bucket, covering the previous seven days regardless of the current alert page. The review queue displays grouped approvals; the alert explorer supports group drill-down. **Groups are not confirmed incidents.**
 
+## P0 — Vollständige deutsche Lokalisierung (DE-DE)
+
+**Verbindlicher Meilenstein vor kommerziellem B2B-Release:** Die gesamte nutzerseitige Plattform muss vollständig und konsistent in deutschem Deutsch (de-DE) verfügbar sein; Englisch bleibt als umschaltbare Sprache erhalten. Der aktuell gemischte deutsch/englische Stand ist **nicht** als abgeschlossen zu betrachten.
+
+**Umfang und Abnahmekriterien:**
+
+1. Sämtliche Oberflächen: Dashboard, Navigation, Alerts, Incident- und Case-Ansichten, Asset-Inventar, Benutzer-/Rollenverwaltung, Freigaben, Bulk Actions, Alert-Gruppen, KI-Empfehlungen, Reports, Einstellungen, Onboarding und Hilfen.
+2. Alle Interaktionstexte einschließlich Buttons, Filter, Tabellentitel, Status, Eingabevalidierung, Lade-/Leermeldungen, Fehlerdialoge, Bestätigungen, Benachrichtigungen, Tooltips, Platzhalter und Barrierefreiheitsbeschriftungen.
+3. KI- und Automationsausgaben: deutschsprachige Zusammenfassungen, Evidenzbegründungen, Incident-Berichte, Remediation-Hinweise, Freigabevorschläge und Sicherheitswarnungen. Maschinell generierte Inhalte müssen fachlich überprüfbar sein; technische Indikatoren, Ereignis-IDs und Quellbelege bleiben unverändert.
+4. Durchgängiges Internationalisierungssystem (i18n) mit zentral gepflegten Übersetzungsschlüsseln, Fallback-Verhalten und vollständiger Sprachumschaltung ohne verstreute hartcodierte UI-Texte.
+5. Deutsche Datums-, Zeit-, Zeitzonen-, Zahlen- und Formatkonventionen (de-DE / Europe/Berlin), ohne UTC-Zeitstempel oder API-Daten zu verfälschen.
+6. Glossar für IT-/SOC-Fachbegriffe und einheitliche Terminologie (z. B. Sicherheitsmeldung, Freigabe, Vorfall, Schweregrad). Eigennamen und standardisierte Begriffe wie CVE, MITRE ATT&CK oder Wazuh bleiben bei Bedarf im Original.
+7. Automatisierte Prüfungen für fehlende Schlüssel und sprachabhängige UI-Tests (inklusive Responsive Design, Überlängen, Tastatur- und Screenreader-Bedienung). Abnahmeprüfung aller Seiten und typischen Workflows in Deutsch.
+8. Auch Benutzer-Dokumentation, Setup-Anleitungen, Sicherheitshinweise, Datenschutzhinweise und Kundenkommunikation vollständig auf Deutsch bereitstellen; technische Entwicklerdokumentation kann zusätzlich Englisch enthalten.
+
+**Definition of Done:** Keine ungeplanten englischen nutzersichtbaren Zeichenketten im deutschen Modus; alle Seiten und relevanten Fehlerszenarien durchgetestet; keine regressiven Änderungen am englischen Modus; Freigabe durch fachliche und sprachliche QA.
+
 ## Next milestones
 
 | ID | Priority | Feature | Acceptance criteria |
 | --- | --- | --- | --- |
+| DE | P0 | Vollständige deutsche Lokalisierung | Gesamte Oberfläche, Meldungen, KI-Ausgaben und Dokumentation in de-DE; automatisierte Schlüsselprüfung und Sprach-QA |
 | 1 | P0 | Fast review keyboard shortcuts | A/R/N/P work outside text fields; confirmation for destructive operations; accessible focus states and no accidental submissions |
 | 2 | P0 | Smart review ordering | Configurable risk score combining severity, asset criticality, incident confidence and age; stable pagination with clear explanations |
 | 6 | P1 | Incident timeline | Windows Event 7040/7045, 4688, Sysmon, auth events and networking merged by verified time/source; explicit provenance and missing-data markers |

@@ -26,6 +26,39 @@
 
 ---
 
+## Aktueller Funktionsumfang / Current feature overview (November 2026)
+
+**Agentic SOC Analyst Platform** ist eine Security-Operations-Plattform zur Erfassung, Normalisierung, Analyse und Bearbeitung von Sicherheitsereignissen. **Wichtige Unterscheidung:** Das auf Vercel bereitgestellte Next.js/Neon-Live-Dashboard und der separat betriebene Python/FastAPI/LangGraph-Referenz-Backend-Stack haben unterschiedliche Laufzeitumfänge. Nicht alle Funktionen des Python-Backends sind in der gehosteten SaaS-Konsole verfügbar.
+
+| Bereich | Gehostetes Next.js-/Neon-Dashboard | Separater Python-Backend-Stack |
+| --- | --- | --- |
+| Eingänge | Authentifizierte Wazuh-/EDR-JSON-Ingestion über HTTPS, Agent-Bindung und Duplikaterkennung | Sigma-, EDR- und Windows-Parser; unveränderlicher Quellspeicher, Dead Letters und Replay |
+| Events & Assets | Live-Alert-Suche, Filter, Severity-/Host-Drill-down, Event-Detail, Asset-Inventar/Monitoring gemäß jeweiliger Anbindung | OCSF-Normalisierung und Datenmodell, Entity-/Evidenzsuche und relationale Verknüpfungen |
+| Windows-Telemetrie | Strukturierte Event-/Prozess-/Dienst-Metadaten aus Wazuh, sofern vom Agent/Manager übermittelt; sensible Werte werden begrenzt/redigiert | Windows XML, JSON und Winlogbeat-Parser |
+| Alarm-Korrelation | Vorgeschlagene 7-Tage-Gruppen nach Host, Regel, Quelle und Stundenfenster; Ein-Klick-Drill-down | Suche und Investigationen über gespeicherte Evidenz |
+| Analyse | Regelbasierte, evidenzbezogene Triage und Empfehlungen; **keine kalibrierte KI-Sicherheitswahrscheinlichkeit** | Deterministischer LangGraph-Investigationsworkflow mit zitierbaren Claims; kein LLM im Referenzworkflow |
+| Freigaben | Approve/Reject/Request changes, automatischer Wechsel zur nächsten Freigabe, Konfliktschutz bei gleichzeitiger Entscheidung, gruppierte Bulk-Entscheidungen für 2–20 zusammengehörige Drafts | Human-in-the-loop Freigaben mit Evidenzvalidierung und Rollen-/Aufgabentrennung |
+| Oberfläche | Dashboard, Alerts, Timeline-Aggregation, private Analystenansicht, weitere Seiten je nach angebundener Datenquelle | Next.js-Konsole mit Cases, Investigationen, Agentenbereich, Review Queue und Administration |
+| Observability | Vercel-Deployment und Datenbankbetrieb; Integrationsstatus abhängig von Konfiguration | OpenTelemetry, Prometheus, Grafana, Loki, Tempo, Alertmanager und Redis Streams |
+
+### Wichtige Änderungen (November 2026)
+
+- **Mehr Kontext für Windows-Events:** Zusätzliche Prozess- und Parent-Prozess-IDs, Benutzer-/SID-/Logon-Felder, Dienstkonfiguration, Event-Record-IDs, Quell-/Ziel-IP und Signatur-/Hash-Metadaten, soweit vorhanden. Ereignis 7040 identifiziert den Verursacher **nicht** automatisch.
+- **Schnellerer Review-Workflow:** Nach einer erfolgreichen Einzelentscheidung wird automatisch die nächste offene Freigabe geladen.
+- **Sicherere Freigaben:** Vergleichs- und Statusprüfung bei parallelen Entscheidungen; serverseitige Aktualisierung der offenen Queue.
+- **Evidenzbasierte Empfehlungen:** Transparente regelbasierte Einschätzung und Belegverweise – **keine automatische Freigabe und keine unbelegte LLM-Konfidenz**.
+- **Bulk-Freigaben:** Manuell bestätigte Approve-/Reject-Aktionen für 2–20 passende Drafts mit serverseitiger Gruppierungsprüfung.
+- **Alert-Gruppierung:** Korrelationsvorschläge nach Host, Rule-ID, Quelle und Stunde; die Gruppe ist **kein bestätigter Incident**.
+- **Kommerzielle Roadmap:** [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) enthält die vollständige **deutsche Lokalisierung als P0-Anforderung**, erweitertes Auditing, Smart Review, Timeline, sichere Remediation und weitere Verbesserungen.
+
+**Grenzen für den produktiven B2B-Betrieb:** Vollständige deutsche Übersetzung, personenbezogene Audit-Attribution, umfassende Bulk-Concurrency-Tests, Datenretention/DSGVO und weitere Mandanten-/Rollenprüfungen sind noch offen. Automatische Hostisolierung oder ungeprüfte Remediation erfolgt nicht.
+
+### GitHub-Repository-Kurzbeschreibung (Vorschlag für das About-Feld)
+
+> Agentic SOC Platform: Wazuh/EDR-Ingestion, Windows-Telemetrie, Alert-Korrelation, evidenzbasierte Analyse, Bulk-Freigaben und SOC-Dashboard.
+
+---
+
 ## Contents
 
 1. [What it is](#what-it-is)
