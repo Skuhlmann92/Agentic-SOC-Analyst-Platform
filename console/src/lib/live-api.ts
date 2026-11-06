@@ -5,7 +5,7 @@ import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
 import { deriveLiveViews } from "@/lib/live-views";
 import { createHash, timingSafeEqual } from "node:crypto";
-import {extractWindowsEventContext} from "@/lib/windows-event-context";
+import {extractWindowsEventContext,redactWindowsTelemetry} from "@/lib/windows-event-context";
 import { neon } from "@neondatabase/serverless";
 
 export const LIVE_TENANT = "22222222-2222-4222-8222-222222222222";
@@ -53,7 +53,7 @@ function safeWazuhContext(raw: Row, rule: Row, data: Row): Row {
     if (input && typeof input==="object") {
       return Object.fromEntries(Object.entries(input as Row).slice(0,75).filter(([k])=>!sensitive.test(k)).map(([k,v])=>[k,clean(v,depth+1)]));
     }
-    if(typeof input==="string") return input.slice(0,1200).replace(/(password|token|secret|api[_-]?key)\s*[:=]\s*[^\s,;]+/ig,"$1=[REDACTED]");
+    if(typeof input==="string") return redactWindowsTelemetry(input.slice(0,1200)).replace(/(password|token|secret|api[_-]?key)\s*[:=]\s*[^\s,;]+/ig,"$1=[REDACTED]");
     return typeof input==="number"||typeof input==="boolean" ? input : null;
   };
   return {
