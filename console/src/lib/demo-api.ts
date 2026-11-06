@@ -1,3 +1,4 @@
+import {sqlFor} from "@/lib/database-access";
 import {deriveSecurityPosture} from "@/lib/security-posture";
 import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { neon } from "@neondatabase/serverless";
@@ -9,9 +10,7 @@ type RecordRow = Record<string, unknown>;
 type Sql = ReturnType<typeof neon>;
 
 function connection(): Sql {
-  const uri = process.env.POSTGRES_DATABASE_URL || process.env.POSTGRES_URL;
-  if (!uri) throw new Error("POSTGRES_DATABASE_URL is missing");
-  return neon(uri);
+ return sqlFor(process.env.NODE_ENV==="production"?"read":"write");
 }
 
 function time(index: number) {
