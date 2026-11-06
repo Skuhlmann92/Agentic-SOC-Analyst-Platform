@@ -66,6 +66,10 @@ export async function platform<T>(path: string, init?: RequestInit): Promise<T> 
 
 export const sdk = {
   searchAlerts: (params: QueryParams) => platform<Page<AlertHit>>(`api/v1/search/alerts${search(params)}`),
+  alertGroups: () => platform<{data:Array<{
+    host:string;rule_id:string;source:string;bucket:string;count:number;
+    first_seen:string;last_seen:string;sample_id:string
+  }>;method:string;notice:string}>("api/v1/search/alert-groups"),
   getAlert: (id: string) => platform<Alert>(`api/v1/alerts/${id}`),
   searchEvents: (params: QueryParams) => platform<Page<Record<string, unknown>>>(`api/v1/search/events${search(params)}`),
   getEvent: (id: string) => platform<EventDetail>(`api/v1/events/${id}`),
