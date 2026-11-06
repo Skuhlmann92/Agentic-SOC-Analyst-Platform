@@ -85,10 +85,18 @@ export async function agentApi(sql:SQL,request:Request,endpoint:string):Promise<
    if(!found.length)return Response.json({error:{code:"not_found",message:"Draft not found"}},{status:404});
    const run=found[0].payload as Row,draft=run.draft as Row;
    if(draft.status!=="pending_approval")return Response.json({error:{code:"conflict",message:"Draft already decided"}},{status:409});
-   const updated={...draft,status:decision,updated_at:new Date().toISOString(),
-     approval:{decision,actor:"SOC Administrator",note:s(body.note)||null,created_at:new Date().toISOString()}};
-   await sql.query("UPDATE soc_agent_runs SET payload=jsonb_set(payload,'{draft}',$3::jsonb) WHERE tenant_id=$1 AND id=$2",
-     [TENANT,found[0].id,JSON.stringify(updated)]);
+   const requestChanges=decision==="rejected"&&body.intent==="request_changes";
+   const note=s(body.note).trim().slice(0,4000);
+   const recordedNote=requestChanges?`[changes-requested]\\n${note}`:note||null;
+   const now=new Date().toISOString();
+   const updated={...draft,status:decision,updated_at:now,
+     approval:{decision,actor:"SOC Administrator",note:recordedNote,created_at:now}};
+   // Compare-and-set: only one reviewer may transition a pending draft.
+   // A second request receives 409 rather than overwriting the first decision.
+   const changed=items(await sql.query(
+     "UPDATE soc_agent_runs SET payload=jsonb_set(payload,'{draft}',$3::jsonb) WHERE tenant_id=$1 AND id=$2 AND payload->'draft'->>'id'=$4 AND payload->'draft'->>'status'='pending_approval' RETURNING id",
+     [TENANT,found[0].id,JSON.stringify(updated),id]));
+   if(!changed.length)return Response.json({error:{code:"conflict",message:"Draft already decided by another reviewer"}},{status:409});
    return Response.json(updated);
  }
  if(request.method!=="GET")return Response.json({error:{code:"method_not_allowed",message:"Unsupported agent action"}},{status:405});
@@ -100,7 +108,13 @@ export async function agentApi(sql:SQL,request:Request,endpoint:string):Promise<
    draft_title:(run.draft as Row)?.title,draft_severity:(run.draft as Row)?.severity,created_at:run.created_at,finished_at:run.finished_at
  })),page:{limit,has_more:rows.length>limit,next_cursor:null}});
  if(endpoint==="api/v1/agent/drafts"){
-   const drafts=rows.map(x=>x.draft as Row).filter(x=>!q.get("status")||x.status===q.get("status"));
+   // Apply status filtering in PostgreSQL *before* LIMIT so decided drafts
+   // cannot crowd out pending approvals in larger installations.
+   const status=q.get("status");
+   const draftRows=items(await sql.query(
+     "SELECT payload->'draft' AS draft FROM soc_agent_runs WHERE tenant_id=$1 AND ($2::text IS NULL OR payload->'draft'->>'status'=$2) ORDER BY created_at DESC LIMIT $3",
+     [TENANT,status,limit+1]));
+   const drafts=draftRows.map(x=>x.draft as Row);
    return Response.json({data:drafts.slice(0,limit),page:{limit,has_more:drafts.length>limit,next_cursor:null}});
  }
  if(endpoint.startsWith("api/v1/agent/runs/")){
