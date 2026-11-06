@@ -52,7 +52,17 @@ export function ReviewsView() {
         setError("Decision saved, but the pending queue could not be refreshed. Reload the queue to continue.");
       }
     },
-    onError: (reason) => setError(reason instanceof ApiClientError ? reason.message : "The decision was not recorded."),
+    onError: async (reason) => {
+      if (reason instanceof ApiClientError && reason.status === 409) {
+        // Another reviewer got there first: reload the truth from the server.
+        setNote("");
+        setError("This draft was already decided by another reviewer. The queue has been refreshed.");
+        await client.invalidateQueries({ queryKey: ["reviews"] });
+        await client.invalidateQueries({ queryKey: ["draft", selected] });
+        return;
+      }
+      setError(reason instanceof ApiClientError ? reason.message : "The decision was not recorded.");
+    },
   });
 
   const history = (decided.data?.data ?? []).filter((item) => item.approval);
