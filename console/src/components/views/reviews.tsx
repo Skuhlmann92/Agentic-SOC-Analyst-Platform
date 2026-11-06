@@ -31,12 +31,26 @@ export function ReviewsView() {
   const decide = useMutation({
     mutationFn: (body: { decision: "approved" | "rejected"; note?: string; intent?: "request_changes" }) =>
       sdk.decide(selected, body),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       setError("");
       setNote("");
+      // Refresh the queue after the server confirms the decision. Navigate only
+      // to an actual remaining pending draft, never to an already decided one.
       await client.invalidateQueries({ queryKey: ["reviews"] });
-      await client.invalidateQueries({ queryKey: ["draft", selected] });
+      await client.invalidateQueries({ queryKey: ["draft", result.id] });
       await client.invalidateQueries({ queryKey: ["dashboard"] });
+      try {
+        const remaining = await client.fetchQuery({
+          queryKey: ["reviews", "pending"],
+          queryFn: () => sdk.listDrafts({ status: "pending_approval", limit: 50 }),
+          staleTime: 0,
+        });
+        setSelected(remaining.data.find((item) => item.id !== result.id)?.id ?? "");
+      } catch {
+        // Do not navigate using a stale queue if the refresh failed.
+        setSelected("");
+        setError("Decision saved, but the pending queue could not be refreshed. Reload the queue to continue.");
+      }
     },
     onError: (reason) => setError(reason instanceof ApiClientError ? reason.message : "The decision was not recorded."),
   });
