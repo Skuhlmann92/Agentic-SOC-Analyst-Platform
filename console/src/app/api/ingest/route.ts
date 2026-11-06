@@ -1,5 +1,6 @@
 import { ingestEvents } from "@/lib/live-api";
-import {authenticateIngest,validateIngestEvents} from "@/lib/ingest-auth";
+import {authenticateIngest} from "@/lib/ingest-auth";
+import {validateIngestEvents,resolveIngestSource} from "@/lib/ingest-policy";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
   if(!validateIngestEvents(events,credential))return Response.json({error:{code:"agent_not_registered",message:"Connector agent is not enrolled in this organization"}},{status:403});
   const hint = typeof wrapper.source === "string" ? wrapper.source.slice(0,64) :
     (request.headers.get("x-soc-source") || "wazuh").slice(0,64);
-  const authenticatedSource=credential.kind==="connector"?(credential.sourceType||"edr"):hint;
+  const authenticatedSource=resolveIngestSource(credential,hint);
   try {
     const result = await ingestEvents(events,authenticatedSource,credential.tenantId);
     return Response.json({ok:true,source:authenticatedSource,received:events.length,...result},{headers:{"cache-control":"no-store"}});
