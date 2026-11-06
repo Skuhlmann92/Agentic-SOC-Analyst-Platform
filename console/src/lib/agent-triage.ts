@@ -9,13 +9,8 @@ const s=(v:unknown)=>typeof v==="string"?v:"";
 const severityWeight=(s:string)=>({critical:4,high:3,medium:2,low:1,informational:0}[s]??0);
 const guid=(input:string)=>{const h=createHash("sha256").update(input).digest("hex");return h.slice(0,8)+"-"+h.slice(8,12)+"-4"+h.slice(13,16)+"-8"+h.slice(17,20)+"-"+h.slice(20,32);};
 
-export async function initAgent(sql:SQL){
- await sql.query(`CREATE TABLE IF NOT EXISTS soc_agent_runs (
- tenant_id text NOT NULL, id uuid NOT NULL, alert_id uuid NOT NULL,
- created_at timestamptz NOT NULL DEFAULT now(), payload jsonb NOT NULL,
- PRIMARY KEY(tenant_id,id), UNIQUE(tenant_id,alert_id))`);
- await sql.query("CREATE INDEX IF NOT EXISTS soc_agent_runs_created ON soc_agent_runs (tenant_id,created_at DESC)");
-}
+/** Agent schema is maintained by SQL migrations. No runtime DDL. */
+export async function initAgent(_sql: SQL):Promise<void>{return;}
 async function buildRun(sql:SQL,alert:Row):Promise<Row>{
  const alertId=s(alert.id);
  const existing=items(await sql.query("SELECT payload FROM soc_agent_runs WHERE tenant_id=$1 AND alert_id=$2",[TENANT,alertId]));
