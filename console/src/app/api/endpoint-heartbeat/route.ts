@@ -13,11 +13,6 @@ function constantMatch(actual:string,expected:string|undefined){
  if(!expected||!actual)return false;const a=Buffer.from(actual),b=Buffer.from(expected);
  return a.length===b.length&&timingSafeEqual(a,b);
 }
-async function prepare(sql:ReturnType<typeof DB>){
- await sql.query(`CREATE TABLE IF NOT EXISTS soc_endpoint_heartbeats (
- tenant_id text NOT NULL,hostname text NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),
- payload jsonb NOT NULL,PRIMARY KEY(tenant_id,hostname))`);
-}
 export async function POST(request:Request){
  const raw=request.headers.get("authorization")||"";
  if(!raw.startsWith("Bearer "))return Response.json({error:"authentication_required"},{status:401});
@@ -37,7 +32,7 @@ export async function POST(request:Request){
   manager_service:hostname==="Homelab"?text(data.manager_service).slice(0,24):null,
   collector:"signed_endpoint_heartbeat",reported_at:new Date().toISOString()};
  try{
-  const sql=DB();await prepare(sql);
+  const sql=DB();
   await sql.query(`INSERT INTO soc_endpoint_heartbeats(tenant_id,hostname,received_at,payload)
    VALUES($1,$2,now(),$3::jsonb)
    ON CONFLICT(tenant_id,hostname) DO UPDATE SET received_at=now(),payload=excluded.payload`,[LIVE_TENANT,hostname,JSON.stringify(record)]);
@@ -49,7 +44,7 @@ export async function GET(){
  if(session?.role!=="admin"||session.tenantId!==LIVE_TENANT)
   return Response.json({error:"admin_session_required"},{status:401});
  try{
-  const sql=DB();await prepare(sql);
+  const sql=DB();
   const [heartbeats,activity]=await Promise.all([
    sql.query("SELECT hostname,received_at,payload FROM soc_endpoint_heartbeats WHERE tenant_id=$1 ORDER BY hostname",[LIVE_TENANT]),
    sql.query(`SELECT payload->>'hostname' AS hostname,COUNT(*)::int AS alerts_total,
