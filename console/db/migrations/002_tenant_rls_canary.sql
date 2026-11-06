@@ -10,26 +10,9 @@ CREATE TABLE IF NOT EXISTS public.soc_db_role_tenants (
 );
 REVOKE ALL ON public.soc_db_role_tenants FROM PUBLIC;
 
-CREATE OR REPLACE FUNCTION public.soc_tenant_role_matches(candidate uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $function$
- SELECT EXISTS (
-  SELECT 1 FROM public.soc_db_role_tenants r
-  JOIN public.soc_organizations o ON o.id=r.org_id
-  WHERE r.role_name=current_user::name
-    AND r.org_id=candidate
-    AND o.status='active'
- )
-$function$;
-REVOKE ALL ON FUNCTION public.soc_tenant_role_matches(uuid) FROM PUBLIC;
-
--- PostgreSQL SECURITY DEFINER changes CURRENT_USER to function owner.
--- For production use, role identity MUST be transmitted as a trusted function
--- argument from a privileged gateway; never trust a settable custom GUC.
--- Probe policies below instead rely on PG roles directly using CURRENT_ROLE,
--- which is preserved by invoker expressions (no SECURITY DEFINER helper).
+-- No SECURITY DEFINER tenant-identity helper: CURRENT_USER inside such a helper
+-- resolves to the function owner. Each canary instead has an explicit role
+-- policy. This avoids a spoofable custom GUC or owner-context identity bug.
 
 -- Explicit canary roles are NOLOGIN and lack inherited privileges; they cannot
 -- become application credentials or touch production data by themselves.
@@ -53,10 +36,8 @@ ON CONFLICT (role_name) DO NOTHING;
 -- a fixed, verified org identity by privileged onboarding infrastructure.
 ALTER TABLE public.soc_live_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.soc_demo_records ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS soc_live_probe_isolation ON public.soc_live_alerts;
 CREATE POLICY soc_live_probe_isolation ON public.soc_live_alerts FOR SELECT TO soc_rls_live_probe
  USING (tenant_id='22222222-2222-4222-8222-222222222222');
-DROP POLICY IF EXISTS soc_demo_probe_isolation ON public.soc_demo_records;
 CREATE POLICY soc_demo_probe_isolation ON public.soc_demo_records FOR SELECT TO soc_rls_demo_probe
  USING (tenant_id='11111111-1111-4111-8111-111111111111');
 
