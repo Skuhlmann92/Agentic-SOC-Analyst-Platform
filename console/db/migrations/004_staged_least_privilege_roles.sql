@@ -27,50 +27,50 @@ GRANT INSERT ON public.soc_live_alerts TO soc_live_ingest_candidate;
 -- Explicitly no UPDATE/DELETE/SELECT on alerts to ingest candidate.
 -- RETURNING id in the current ingest pipeline needs a separately bounded
 -- migration before a production credential switch.
-CREATE POLICY soc_live_dashboard_candidate_read ON public.soc_live_alerts
+CREATE POLICY soc_soc_live_alerts_cand_read ON public.soc_live_alerts
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_live_ingest_candidate_write ON public.soc_live_alerts
+CREATE POLICY soc_live_alerts_cand_ingest ON public.soc_live_alerts
  FOR INSERT TO soc_live_ingest_candidate
  WITH CHECK(tenant_id='22222222-2222-4222-8222-222222222222');
 
-CREATE POLICY soc_agent_dashboard_candidate_read ON public.soc_agent_runs
+CREATE POLICY soc_soc_agent_runs_cand_read ON public.soc_agent_runs
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_audit_dashboard_candidate_read ON public.soc_live_audit
+CREATE POLICY soc_soc_live_audit_cand_read ON public.soc_live_audit
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_inventory_dashboard_candidate_read ON public.soc_endpoint_inventory
+CREATE POLICY soc_soc_endpoint_inventory_cand_read ON public.soc_endpoint_inventory
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_heartbeat_dashboard_candidate_read ON public.soc_endpoint_heartbeats
+CREATE POLICY soc_soc_endpoint_heartbeats_cand_read ON public.soc_endpoint_heartbeats
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_remediation_dashboard_candidate_read ON public.soc_ai_remediations
+CREATE POLICY soc_soc_ai_remediations_cand_read ON public.soc_ai_remediations
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_assessment_dashboard_candidate_read ON public.soc_remediation_assessments
+CREATE POLICY soc_soc_remediation_assessments_cand_read ON public.soc_remediation_assessments
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_correlation_dashboard_candidate_read ON public.soc_correlation_ai
+CREATE POLICY soc_soc_correlation_ai_cand_read ON public.soc_correlation_ai
  FOR SELECT TO soc_live_dashboard_candidate
  USING(tenant_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_membership_dashboard_candidate_read ON public.soc_org_memberships
+CREATE POLICY soc_soc_org_memberships_cand_read ON public.soc_org_memberships
  FOR SELECT TO soc_live_dashboard_candidate
  USING(org_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_organizations_dashboard_candidate_read ON public.soc_organizations
+CREATE POLICY soc_soc_organizations_cand_read ON public.soc_organizations
  FOR SELECT TO soc_live_dashboard_candidate
  USING(id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_connectors_dashboard_candidate_read ON public.soc_org_connectors
+CREATE POLICY soc_soc_org_connectors_cand_read ON public.soc_org_connectors
  FOR SELECT TO soc_live_dashboard_candidate
  USING(org_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_agents_dashboard_candidate_read ON public.soc_org_agents
+CREATE POLICY soc_soc_org_agents_cand_read ON public.soc_org_agents
  FOR SELECT TO soc_live_dashboard_candidate
  USING(org_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_subscriptions_dashboard_candidate_read ON public.soc_org_subscriptions
+CREATE POLICY soc_soc_org_subscriptions_cand_read ON public.soc_org_subscriptions
  FOR SELECT TO soc_live_dashboard_candidate
  USING(org_id='22222222-2222-4222-8222-222222222222');
-CREATE POLICY soc_org_audit_dashboard_candidate_read ON public.soc_org_audit
+CREATE POLICY soc_soc_org_audit_cand_read ON public.soc_org_audit
  FOR SELECT TO soc_live_dashboard_candidate
  USING(org_id='22222222-2222-4222-8222-222222222222');
 GRANT SELECT ON public.soc_org_audit TO soc_live_dashboard_candidate;
