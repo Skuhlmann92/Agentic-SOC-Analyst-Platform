@@ -188,6 +188,25 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
       [LIVE_TENANT,alertId,"set_status:"+status,actor]);
     return Response.json(row.payload);
   }
+  if(request.method==="GET" && endpoint==="api/v1/search/alert-groups"){
+    // Read-only suggested correlations across all recent alerts, not just a page.
+    // These groups are NOT incidents and must not be auto-closed.
+    const grouped=await sql.query(
+      `SELECT payload->>'hostname' AS host,payload->>'rule_id' AS rule_id,source,
+       date_bin('1 hour'::interval,detected_at,'2000-01-01 00:00:00+00'::timestamptz) AS bucket,
+       COUNT(*)::int AS count,MIN(detected_at) AS first_seen,MAX(detected_at) AS last_seen,
+       (array_agg(id ORDER BY detected_at DESC))[1] AS sample_id
+       FROM soc_live_alerts WHERE tenant_id=$1
+       AND detected_at>=NOW()-interval '7 days'
+       AND NULLIF(payload->>'hostname','') IS NOT NULL
+       AND payload->>'hostname'<>'unknown'
+       AND NULLIF(payload->>'rule_id','') IS NOT NULL
+       GROUP BY 1,2,3,4 HAVING COUNT(*)>=2
+       ORDER BY COUNT(*) DESC,MAX(detected_at) DESC LIMIT 20`,
+      [LIVE_TENANT]);
+    return Response.json({data:resultRows(grouped),method:"same_host_rule_source_hour",
+      notice:"Suggested correlation only, not a confirmed incident."},{headers:{"cache-control":"private, no-store"}});
+  }
   if(request.method==="GET" && endpoint==="api/v1/search/alerts"){
     const q=new URL(request.url).searchParams;
     const start=q.get("from"),end=q.get("to");
