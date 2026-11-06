@@ -1,5 +1,4 @@
 import {neon} from "@neondatabase/serverless";
-import type {NeonQueryFunction} from "@neondatabase/serverless";
 
 /**
  * Explicit database access boundary.
