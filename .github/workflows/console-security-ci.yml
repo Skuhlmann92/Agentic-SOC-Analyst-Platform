@@ -26,7 +26,7 @@ jobs:
         run: npm install --no-audit --no-fund
         working-directory: console
       - name: Tenant isolation and RBAC tests
-        run: node --experimental-strip-types --test tests/tenant-policy.test.mjs
+        run: node --experimental-strip-types --test tests/*.test.mjs
         working-directory: console
       - name: Production build
         run: npm run build
