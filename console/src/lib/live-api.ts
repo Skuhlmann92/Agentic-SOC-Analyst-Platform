@@ -5,6 +5,7 @@ import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
 import { deriveLiveViews } from "@/lib/live-views";
 import { createHash, timingSafeEqual } from "node:crypto";
+import {extractWindowsEventContext} from "@/lib/windows-event-context";
 import { neon } from "@neondatabase/serverless";
 
 export const LIVE_TENANT = "22222222-2222-4222-8222-222222222222";
@@ -71,6 +72,7 @@ export type Normalized = {
   title: string; description: string; severity: string; status: string;
   rule_id: string | null; rule_level: number | null; rule_name: string; vendor: string; product: string;
   wazuh_context?: Row;
+  windows_event?: ReturnType<typeof extractWindowsEventContext>;
   technique_ids: string[]; tactics: string[]; hostname: string | null;
   username: string | null; detected_at: string; created_at: string;
   updated_at: string; headline: string; event_type: string;
@@ -101,7 +103,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIV
     rule_id:value(rule.id)||null,rule_level:Number.isFinite(level)?level:null,rule_name:value(rule.description)||title,
     vendor:source==="wazuh"?"Wazuh":value(raw.vendor)||"EDR",
     product:value(raw.product)||source,technique_ids,tactics:[],
-    ...(source==="wazuh"?{wazuh_context:safeWazuhContext(raw,rule,data)}:{}),
+    ...(source==="wazuh"?{wazuh_context:safeWazuhContext(raw,rule,data),windows_event:extractWindowsEventContext(raw)}:{}),
     hostname:hostName,username:value(data.dstuser)||value(data.srcuser)||value(raw.username)||null,
     detected_at:at,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
     headline:title,event_type:value(rule.groups)||value(event.category)||"Security Alert",
@@ -248,7 +250,7 @@ export async function liveApi(request:Request,path:string[],actor="SOC Administr
     class_name:a.event_type,activity_name:a.title,severity:a.severity,
     outcome:a.event_outcome,hostname:a.hostname,username:a.username,
     message:a.event_message,technique_ids:a.technique_ids,
-    document:{source:a.source,rule_id:a.rule_id,rule_level:a.rule_level,srcip:a.srcip,wazuh_context:a.wazuh_context||null}
+    document:{source:a.source,rule_id:a.rule_id,rule_level:a.rule_level,srcip:a.srcip,wazuh_context:a.wazuh_context||null,windows_event:a.windows_event||null}
   }));
   if(endpoint==="api/v1/search/alerts")return Response.json(page(filtered,q));
   if(endpoint==="api/v1/search/events")return Response.json(page(events,q));
