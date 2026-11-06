@@ -1,8 +1,9 @@
+import type {IngestIdentity} from "@/lib/ingest-policy";
 import {createHash,timingSafeEqual} from "node:crypto";
 import {neon} from "@neondatabase/serverless";
 import {LEGACY_LIVE_TENANT} from "@/lib/tenant-policy";
 
-type Credential={tenantId:string;connectorId:string|null;kind:"legacy"|"connector";sourceType:"wazuh"|"edr"|null;allowedAgentIds:readonly string[]};
+type Credential=IngestIdentity;
 /** Server-derived identity only. Never use tenant/source claims provided in an alert. */
 export async function authenticateIngest(authorization:string|null):Promise<Credential|null>{
  if(!authorization?.startsWith("Bearer "))return null;
@@ -42,14 +43,4 @@ export async function authenticateIngest(authorization:string|null):Promise<Cred
   console.error("Ingest authentication unavailable",error instanceof Error?error.name:"unknown");
   return null;
  }
-}
-export function validateIngestEvents(events:unknown[],credential:Credential):boolean{
- if(credential.kind==="legacy")return true; // Legacy token still bound to only the old live workspace.
- return events.every(item=>{
-  if(!item||typeof item!=="object"||Array.isArray(item))return false;
-  const raw=item as Record<string,unknown>;
-  const agent=raw.agent&&typeof raw.agent==="object"&&!Array.isArray(raw.agent)
-   ?raw.agent as Record<string,unknown>:{};
-  return typeof agent.id==="string"&&credential.allowedAgentIds.includes(agent.id);
- });
 }
