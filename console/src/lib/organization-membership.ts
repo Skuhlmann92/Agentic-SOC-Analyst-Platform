@@ -1,5 +1,4 @@
 import {sqlFor} from "@/lib/database-access";
-import {neon} from "@neondatabase/serverless";
 import {LEGACY_LIVE_TENANT} from "@/lib/tenant-policy";
 
 /**
