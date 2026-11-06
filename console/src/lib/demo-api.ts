@@ -46,7 +46,6 @@ async function prepare(sql: Sql) {
   // Production demo data was seeded by a migration; never execute DDL or seed
   // writes from a public GET request. Local development may still self-seed.
   if(process.env.NODE_ENV==="production")return;
-  await sql.query("CREATE TABLE IF NOT EXISTS soc_demo_records (tenant_id text NOT NULL, kind text NOT NULL, id uuid NOT NULL, payload jsonb NOT NULL, PRIMARY KEY(tenant_id,kind,id))");
   const exists = await sql.query("SELECT id FROM soc_demo_records WHERE tenant_id=$1 AND kind='marker' LIMIT 1",[TENANT]);
   if (Array.isArray(exists) && exists.length) return;
   for (let i=0;i<samples.length;i++) {
