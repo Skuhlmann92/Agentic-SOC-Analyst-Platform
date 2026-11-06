@@ -1,3 +1,4 @@
+import {deduplicationNamespace} from "@/lib/ingest-policy";
 import {deriveSecurityPosture} from "@/lib/security-posture";
 import {createTimeline,timelineBounds,timelineOptions} from "@/lib/timeline";
 import { agentApi, analyzeNewAlert } from "@/lib/agent-triage";
@@ -88,7 +89,7 @@ export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIV
   const at=Number.isNaN(date.getTime())?new Date().toISOString():date.toISOString();
   const hostName=value(agent.name)||value(host.name)||value(raw.hostname)||value(raw.device_name)||"unknown";
   const idRaw=value(raw.id)||value(raw.external_id)||value(raw.event_id);
-  const keyPrefix=tenantId===LIVE_TENANT?source:`${tenantId}:${source}`;
+  const keyPrefix=deduplicationNamespace(tenantId,LIVE_TENANT,source);
   const key=idRaw ? `${keyPrefix}:${idRaw}` : `${keyPrefix}:${createHash("sha256").update(JSON.stringify(raw)).digest("hex")}`;
   const id=uuidFromKey(key);
   const level=Number(rule.level)||Number(raw.rule_level)||0;
