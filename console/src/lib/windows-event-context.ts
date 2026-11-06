@@ -12,7 +12,7 @@ const str=(x:unknown,max=256):string|null=>{
 const pick=(o:Dict,keys:string[],max=256):string|null=>{
   for(const key of keys){const v=str(o[key],max);if(v)return v;}return null;
 };
-function redact(value:string):string {
+export function redactWindowsTelemetry(value:string):string {
   return value
     .replace(/(\b(?:password|passwd|pwd|token|secret|api[_-]?key|authorization)\b\s*[:=]\s*)(?:"[^"]*"|'[^']*'|\S+)/gi,"$1[REDACTED]")
     .replace(/(\b(?:-password|-credential|-token|-apikey|--password|--token|--secret)\s+)(?:"[^"]*"|'[^']*'|\S+)/gi,"$1[REDACTED]")
@@ -66,7 +66,7 @@ export function extractWindowsEventContext(payload:unknown):WindowsEventContext|
     parent_process_id:pick(eventdata,["processId","ProcessId","parentProcessId","ParentProcessId"]),
     process_guid:pick(eventdata,["processGuid","ProcessGuid"]),
     parent_process_guid:pick(eventdata,["parentProcessGuid","ParentProcessGuid"]),
-    command_line:commandLine?redact(commandLine):null,
+    command_line:commandLine?redactWindowsTelemetry(commandLine):null,
     service_name:pick(eventdata,["serviceName","ServiceName","param1"]),
     service_start_type:pick(eventdata,["serviceStartType","ServiceStartType","param2","param3"]),
     service_binary:pick(eventdata,["imagePath","ImagePath","serviceFileName","ServiceFileName"],520),
