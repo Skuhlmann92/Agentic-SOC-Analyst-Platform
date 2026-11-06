@@ -1,6 +1,6 @@
+import {sqlFor} from "@/lib/database-access";
 import {timingSafeEqual} from "node:crypto";
 import {cookies} from "next/headers";
-import {neon} from "@neondatabase/serverless";
 import {openSession,SESSION_COOKIE} from "@/lib/session-token";
 import {LIVE_TENANT} from "@/lib/live-api";
 export const runtime="nodejs";
@@ -8,7 +8,7 @@ export const dynamic="force-dynamic";
 type Row=Record<string,unknown>;
 const rows=(v:unknown):Row[]=>Array.isArray(v)?v as Row[]:[];
 const text=(v:unknown)=>typeof v==="string"?v:"";
-const DB=()=>{const url=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;if(!url)throw Error("Missing database");return neon(url);};
+const DB=(purpose:"read"|"write"="write")=>sqlFor(purpose);
 function constantMatch(actual:string,expected:string|undefined){
  if(!expected||!actual)return false;const a=Buffer.from(actual),b=Buffer.from(expected);
  return a.length===b.length&&timingSafeEqual(a,b);
@@ -44,7 +44,7 @@ export async function GET(){
  if(session?.role!=="admin"||session.tenantId!==LIVE_TENANT)
   return Response.json({error:"admin_session_required"},{status:401});
  try{
-  const sql=DB();
+  const sql=DB("read");
   const [heartbeats,activity]=await Promise.all([
    sql.query("SELECT hostname,received_at,payload FROM soc_endpoint_heartbeats WHERE tenant_id=$1 ORDER BY hostname",[LIVE_TENANT]),
    sql.query(`SELECT payload->>'hostname' AS hostname,COUNT(*)::int AS alerts_total,
