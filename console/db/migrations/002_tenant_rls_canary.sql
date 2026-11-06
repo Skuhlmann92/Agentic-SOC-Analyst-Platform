@@ -46,5 +46,7 @@ GRANT USAGE ON SCHEMA public TO soc_rls_demo_probe,soc_rls_live_probe;
 GRANT SELECT ON public.soc_demo_records TO soc_rls_demo_probe;
 GRANT SELECT ON public.soc_live_alerts TO soc_rls_live_probe;
 
+-- Grant SET ROLE to the existing owner strictly for transaction-scoped RLS tests.
+GRANT soc_rls_demo_probe,soc_rls_live_probe TO neondb_owner;
 -- Existing owner bypasses RLS by design until application credentials rotate.
 -- Do not grant membership of probe roles to untrusted applications or users.
