@@ -111,24 +111,9 @@ export function normalizeEvent(payload: unknown, sourceHint: string,tenantId=LIV
   };
 }
 
-export async function initLive(sql: NeonSql): Promise<void> {
-  await sql.query(`CREATE TABLE IF NOT EXISTS soc_live_alerts (
-    tenant_id text NOT NULL,
-    id uuid NOT NULL,
-    external_id text NOT NULL,
-    source text NOT NULL,
-    severity text NOT NULL,
-    status text NOT NULL DEFAULT 'new',
-    detected_at timestamptz NOT NULL,
-    payload jsonb NOT NULL,
-    PRIMARY KEY (tenant_id,id)
-  )`);
-  await sql.query("CREATE INDEX IF NOT EXISTS soc_live_alerts_recent ON soc_live_alerts (tenant_id,detected_at DESC)");
-  await sql.query(`CREATE TABLE IF NOT EXISTS soc_live_audit (
-    id bigserial PRIMARY KEY, tenant_id text NOT NULL, alert_id uuid NOT NULL,
-    action text NOT NULL, actor text NOT NULL, recorded_at timestamptz NOT NULL DEFAULT NOW()
-  )`);
-}
+// Schema is managed by versioned SQL migrations, never by request handlers.
+// Existing tables and indexes were verified in Neon before removing runtime DDL.
+export async function initLive(_sql: NeonSql): Promise<void> { return; }
 export async function ingestEvents(events: unknown[], source: string,tenantId=LIVE_TENANT): Promise<{accepted:number;duplicates:number}> {
   const sql=sqlClient();
   await initLive(sql);
