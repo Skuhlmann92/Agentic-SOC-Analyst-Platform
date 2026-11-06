@@ -67,7 +67,6 @@ export async function POST(req:Request){
   analyst_actions:(Array.isArray(result.analyst_actions)?result.analyst_actions:[]).map(s).slice(0,10),
   related_alert_ids:linked,limitations:s(result.limitations).slice(0,2000),
   evidence_count:alerts.length,notice:"AI-generated, unverified analyst aid. No action is executed."};
- await sql.query("CREATE TABLE IF NOT EXISTS soc_correlation_ai (tenant_id text NOT NULL,case_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),payload jsonb NOT NULL,PRIMARY KEY(tenant_id,case_id))");
  await sql.query("INSERT INTO soc_correlation_ai(tenant_id,case_id,payload) VALUES($1,$2,$3::jsonb) ON CONFLICT(tenant_id,case_id) DO UPDATE SET payload=excluded.payload,created_at=now()",[LIVE_TENANT,caseId,JSON.stringify(response)]);
  return Response.json(response);
 }
