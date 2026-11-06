@@ -1,4 +1,5 @@
-import { validToken, ingestEvents } from "@/lib/live-api";
+import { ingestEvents } from "@/lib/live-api";
+import {authenticateIngest,validateIngestEvents} from "@/lib/ingest-auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -6,7 +7,8 @@ const MAX_BODY = 256 * 1024;
 const MAX_BATCH = 100;
 
 export async function POST(request: Request) {
-  if (!validToken(request.headers.get("authorization"))) {
+  const credential=await authenticateIngest(request.headers.get("authorization"));
+  if (!credential) {
     return Response.json({ error: { code: "unauthorized", message: "Valid bearer token required" } }, { status: 401 });
   }
   const contentType = request.headers.get("content-type") || "";
@@ -32,10 +34,11 @@ export async function POST(request: Request) {
   if (!events.length || events.length > MAX_BATCH || events.some(x=>!x||typeof x!=="object"||Array.isArray(x))) {
     return Response.json({ error: { code: "invalid_batch", message: "Provide 1-100 event objects" } }, { status: 422 });
   }
+  if(!validateIngestEvents(events,credential))return Response.json({error:{code:"agent_not_registered",message:"Connector agent is not enrolled in this organization"}},{status:403});
   const hint = typeof wrapper.source === "string" ? wrapper.source.slice(0,64) :
     (request.headers.get("x-soc-source") || "wazuh").slice(0,64);
   try {
-    const result = await ingestEvents(events,hint);
+    const result = await ingestEvents(events,hint,credential.tenantId);
     return Response.json({ok:true,source:hint,received:events.length,...result},{headers:{"cache-control":"no-store"}});
   } catch {
     return Response.json({error:{code:"storage_unavailable",message:"Unable to persist events to Neon"}},{status:503});
