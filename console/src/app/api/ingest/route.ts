@@ -37,9 +37,10 @@ export async function POST(request: Request) {
   if(!validateIngestEvents(events,credential))return Response.json({error:{code:"agent_not_registered",message:"Connector agent is not enrolled in this organization"}},{status:403});
   const hint = typeof wrapper.source === "string" ? wrapper.source.slice(0,64) :
     (request.headers.get("x-soc-source") || "wazuh").slice(0,64);
+  const authenticatedSource=credential.kind==="connector"?(credential.sourceType||"edr"):hint;
   try {
-    const result = await ingestEvents(events,hint,credential.tenantId);
-    return Response.json({ok:true,source:hint,received:events.length,...result},{headers:{"cache-control":"no-store"}});
+    const result = await ingestEvents(events,authenticatedSource,credential.tenantId);
+    return Response.json({ok:true,source:authenticatedSource,received:events.length,...result},{headers:{"cache-control":"no-store"}});
   } catch {
     return Response.json({error:{code:"storage_unavailable",message:"Unable to persist events to Neon"}},{status:503});
   }
