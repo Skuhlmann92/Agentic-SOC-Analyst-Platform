@@ -68,7 +68,7 @@ export function extractWindowsEventContext(payload:unknown):WindowsEventContext|
     parent_process_guid:pick(eventdata,["parentProcessGuid","ParentProcessGuid"]),
     command_line:commandLine?redactWindowsTelemetry(commandLine):null,
     service_name:pick(eventdata,["serviceName","ServiceName","param1"]),
-    service_start_type:pick(eventdata,["serviceStartType","ServiceStartType","param2","param3"]),
+    service_start_type:pick(eventdata,["serviceStartType","ServiceStartType","param3","param2"]),
     service_binary:pick(eventdata,["imagePath","ImagePath","serviceFileName","ServiceFileName"],520),
     service_account:pick(eventdata,["accountName","AccountName","serviceAccount","ServiceAccount"]),
     hashes:pick(eventdata,["hashes","Hashes"],700),
