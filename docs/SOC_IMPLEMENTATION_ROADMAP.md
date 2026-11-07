@@ -10,6 +10,13 @@ Aktuelle technische Bestandsaufnahme und Prüfergebnisse: [COMMERCIAL_READINESS_
 - [ ] **Vor Umschaltung** aktuelle Server-Owner-Verbindung durch tatsächlich eingeschränkte LOGIN-Rollen ersetzen, deren Rechte und API-Zugriffe im Staging prüfen; danach reproduzierbaren End-to-End-Test und Rollback durchführen.
 - [ ] `docs/DB_ACCESS_CUTOVER.md` als verbindlichen Prüfkatalog benutzen.
 
+## P0-Fortschritt 07.11.2026 — echte PostgreSQL-RLS-Logins
+- [x] Zwei echte, nicht privilegierte Neon-Leser `soc_live_reader_v1` und `soc_demo_reader_v1` angelegt und mit RLS-Policies streng an Live-/Demo-Mandanten gebunden. Test mit den **echten Loginkonten**: 2.290 Live-Alerts, zwei Inventare, 46 Demodatensätze; gegenseitiger Tabellenzugriff verweigert, fremde Zeilen null, kein INSERT/UPDATE und kein Lesezugriff auf Connector-Secrets.
+- [x] Separate Datenbank-URLs verschlüsselt bei Vercel hinterlegt. Produktionsschalter `SOC_READ_DB_ENABLED` bleibt ausdrücklich deaktiviert.
+- [x] Separater GitHub-Testbranch `test/restricted-read-20261107` mit aktiviertem Read-only-Schalter **nur in Vercel Preview**. Preview-Build READY, Health-Check HTTP 200 und Demo-Seite HTTP 200. Produktionsdomain weiterhin HTTP 200.
+- [ ] **Gate zur Produktivaktivierung:** Authentifizierte Preview-Abfragen über tatsächliche Dashboard-API auf Alerts, Timeline, Fälle, Inventar, Membership und Demo testen. Bis dahin keine Aktivierung des Produktionsschalters.
+- [ ] **Danach:** privilegierte Schreib-/Ingest-Verbindung ablösen, Write-Operations inklusive Audit/Agent-Triage transactionssicher trennen und echte mandantenspezifische Dateneingänge erproben.
+
 ## P0 — Sicherheit / Datenintegrität / Mandantentrennung
 - [x] Additive Neon-Datenmodelle für Organisation, Mitglieder, Connectoren, Agent-Zuordnung, Audit, Tarife (149/349/699 EUR) und inaktive Subscriptions; bestehende Records unberührt.
 - [x] Live/Demo-API-Grenze im Code fail-closed für unbekannte Mandanten; private Live-API prüft aktive Org-Mitgliedschaft. Session-Secret und Test-Account-Absicherung, Login-Throttle, API-Origin-Prüfung, Browser-Sicherheitsheader.
