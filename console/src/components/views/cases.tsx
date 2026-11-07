@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +14,6 @@ import { ApiClientError, sdk } from "@/lib/sdk/client";
 const STATUSES = ["", "open", "investigating", "contained", "recovered", "closed"];
 
 export function CasesView() {
-  const router = useRouter();
   const [status, setStatus] = useState("");
   const [severity, setSeverity] = useState("");
   const [cursors, setCursors] = useState<string[]>([]);
@@ -62,9 +61,9 @@ export function CasesView() {
             </thead>
             <tbody>
               {cases.data.data.map((item) => (
-                <tr key={item.id} onClick={() => router.push(`/cases/${item.id}`)}>
+                <tr key={item.id}>
                   <td>
-                    <p className="font-medium">{item.title}</p>
+                    <Link className="font-medium text-accent hover:underline" href={`/cases/${item.id}`}>{item.title}</Link>
                     <p className="text-xs text-muted-foreground">{item.external_ref || "No external reference"}</p>
                   </td>
                   <td><StatusBadge value={item.status} /></td>
