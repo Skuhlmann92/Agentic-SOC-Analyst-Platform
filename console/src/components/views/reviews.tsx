@@ -149,9 +149,9 @@ export function ReviewsView() {
         detail={t("Freigaben prüfen, genehmigen, ablehnen oder Änderungen anfordern. Jede Entscheidung wird gespeichert. Keine automatische Remediation.","Review drafts, approve, reject or request changes. Each decision is recorded. No automatic remediation.")}
       />
       <p className="mb-3 text-xs text-muted-foreground">{t("Tastatur: A = Genehmigen, R = Ablehnen (mit Bestätigung), N = Nächste, P = Vorherige. In Eingabefeldern deaktiviert.","Keyboard: A = Approve, R = Reject (confirmation required), N = Next, P = Previous. Disabled in input fields.")}</p>
-      <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-        <section className="panel rounded-lg p-3">
-          <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("Offene Freigaben","Pending approval")}</p>
+      <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.85fr)_minmax(0,2fr)]">
+        <section className="panel rounded-lg p-3 xl:sticky xl:top-[90px] xl:max-h-[calc(100vh-110px)] xl:overflow-y-auto">
+          <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("Offene Freigaben","Pending approval")} · {queue.data?.data.length??"…"}</p>
           {queue.isLoading ? <LoadingBlock label={t("Freigaben werden geladen","Loading reviews")} /> : null}
           {queue.isError ? <ErrorState message={queue.error instanceof ApiClientError ? queue.error.message : t("Die Freigaben konnten nicht geladen werden.","The queue could not be loaded.")} onRetry={() => queue.refetch()} /> : null}
           {queue.data && queue.data.data.length === 0 ? <EmptyState title={t("Keine offenen Freigaben","Queue is clear")} body={t("Es warten keine Freigaben auf eine Entscheidung.","No draft is waiting for a person.")} /> : null}
@@ -163,7 +163,7 @@ export function ReviewsView() {
               <option value="newest">{t("Neueste zuerst","Newest first")}</option>
             </select>
           </div>
-          <div className="space-y-3">
+          <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
             {[...grouped.entries()].map(([key,members]) => (
               <div key={key} className="rounded border border-border p-2">
                 <div className="mb-1 flex items-center justify-between gap-2">
@@ -205,7 +205,7 @@ export function ReviewsView() {
             </div>
           ):null}
         </section>
-        <section>
+        <section className="min-w-0">
           {!selected ? <EmptyState title={t("Freigabe auswählen","Select a draft")} body={t("Eine Freigabe öffnen, Belege prüfen und entscheiden.","Open a pending draft to read its claims and record a decision.")} /> : null}
           {draft.isLoading ? <LoadingBlock label={t("Freigabe wird geladen","Loading draft")} /> : null}
           {draft.data ? (
@@ -238,7 +238,7 @@ export function ReviewsView() {
               </ol>
               {draft.data.status === "pending_approval" ? (
                 <div className="mt-4">
-                  <textarea className="field h-20 py-2" placeholder={t("Begründung für Ablehnung oder Änderungswunsch","Note for a rejection or a change request")} value={note} onChange={(event) => setNote(event.target.value)} />
+                  <textarea className="field min-h-24 py-2" placeholder={t("Begründung für Ablehnung oder Änderungswunsch","Note for a rejection or a change request")} value={note} onChange={(event) => setNote(event.target.value)} />
                   {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button disabled={decide.isPending} onClick={() => decide.mutate({ decision: "approved", note })}>{t("Genehmigen","Approve")}</Button>
