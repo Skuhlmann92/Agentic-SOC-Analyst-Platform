@@ -1,3 +1,17 @@
+## Verified P0 read-only login credentials — 2026-11-07
+
+**Implemented and tested, NOT enabled on the production website.**
+
+- Neon main branch `br-flat-cake-bcruq472`, database `neondb`: created actual `LOGIN` identities `soc_live_reader_v1` and `soc_demo_reader_v1` using Neon scoped `read_only` access (not `neon_superuser`). Both are `NOSUPERUSER`, `NOBYPASSRLS`.
+- Added tenant-bound SELECT policies across 14 live tables and a demo-only policy on `soc_demo_records`. Revoked access to the opposite tenant's tables and protected credential/throttle/audit tables. Source-controlled as `007_restricted_login_readers.sql`. No existing alerts or software inventories were modified.
+- Direct SQL queries **authenticated as these actual roles**: live reader sees **2,290 alerts** and two inventory rows; demo reader sees **46 demo records**; cross-tenant SELECT attempts raise PostgreSQL `42501 permission denied`; live role has no INSERT/UPDATE and cannot SELECT credential hashes.
+- Vercel production now stores the two connection URLs as **encrypted environment values** `SOC_READ_DATABASE_URL` and `SOC_DEMO_READ_DATABASE_URL`. Production `SOC_READ_DB_ENABLED` remains **unset/off**.
+- Vercel preview stores independent encrypted read URLs with `SOC_READ_DB_ENABLED=true` and runs test branch `test/restricted-read-20261107`. Preview deploy `dpl_Bf1PfbvKGjvnNnccjCgzRG8NAnVw` built **READY**; preview `/api/health/database` HTTP 200/connected, `/demo` HTTP 200. No preview runtime errors were reported in the sampled error log window.
+- **Testing limitation:** An authenticated frontend/API round-trip through the preview session was not completed; an unauthenticated private API correctly returned HTTP 401. Do not enable production read-only flag before authenticated `/api/platform` route tests, particularly `/api/v1/search/alerts`, timeline, cases, and membership guard.
+- Production `https://soc.samuelkuhlmann.com/api/health/database` returns HTTP 200 connected and the `/dashboard` page returns HTTP 200 at this checkpoint. Production continues with its existing database credentials.
+
+Next release gate: authenticated preview end-to-end verification with the actual read-only login; verify demo API after demo sign-in, alert list/detail/time series, membership checks, and private inventory; only then activate the **read-only** production flag. The ingest/write owner cutover is still a separate, higher-risk migration.
+
 # P0 Database Access Cutover — staged and reversible
 
 Status: **prepared, NOT enabled**. No external customer data should be ingested yet.
