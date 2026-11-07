@@ -24,6 +24,7 @@ export function RemediationPanel({initialAlert="",compact=false}:{initialAlert?:
  const qc=useQueryClient();
  const {t}=usePreferences();
  const [alertId,setAlertId]=useState(initialAlert);
+ useEffect(()=>{setAlertId(initialAlert);},[initialAlert]);
  const [host,setHost]=useState("");
  const [selected,setSelected]=useState("");
  const [message,setMessage]=useState("");
