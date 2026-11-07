@@ -46,7 +46,7 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
  const pending=reviews.data?.data.length??0;
  const newest=alerts.data?.data[0]?.detected_at;
  const kpis=[
- {title:t("Sicherheitsmeldungen","Security alerts"),number:facets.isLoading?"…":total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
+ {title:t("Sicherheitsmeldungen","Security alerts"),number:facets.isLoading?"…":facets.isError?"—":total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
  {title:t("Hohe Priorität","High priority"),number:facets.isLoading?"…":critical.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("High + Critical, keine bestätigten Vorfälle","High + critical, not confirmed incidents"),icon:ShieldAlert,accent:"#ed7386",href:"/alerts"},
  {title:t("Aktive Fälle","Active cases"),number:cases.isLoading?"…":countLabel(runningCases,Boolean(cases.data?.page.has_more)),sub:t("Offen oder in Bearbeitung","Open or investigating"),icon:Briefcase,accent:"#609ee8",href:"/cases"},
  {title:t("Warten auf Freigabe","Awaiting approval"),number:reviews.isLoading?"…":countLabel(pending,Boolean(reviews.data?.page.has_more)),sub:t("KI- und Analyseentwürfe","AI and investigation drafts"),icon:Clock3,accent:"#e5af53",href:"/reviews"},
