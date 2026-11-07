@@ -95,9 +95,9 @@ function EntitiesExplorer() {
             </thead>
             <tbody>
               {rows.data.data.map((entity) => (
-                <tr key={entity.id} onClick={() => router.push(`/entities/${entity.id}`)}>
+                <tr key={entity.id}>
                   <td>
-                    <p className="font-medium">{entity.display_value}</p>
+                    <a className="font-medium text-accent hover:underline" href={entity.entity_type==="host"?`/assets/${encodeURIComponent(entity.display_value)}`:`/entities/${entity.id}`}>{entity.display_value}</a>
                     <p className="font-mono text-xs text-muted-foreground">{entity.entity_type}</p>
                   </td>
                   <td><StatusBadge value={entity.severity} /></td>
