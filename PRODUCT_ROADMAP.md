@@ -25,13 +25,21 @@ Updated: 2026-11-06. Features #3–#5 were merged and deployed via PR #3. Subseq
 
 **Definition of Done:** Keine ungeplanten englischen nutzersichtbaren Zeichenketten im deutschen Modus; alle Seiten und relevanten Fehlerszenarien durchgetestet; keine regressiven Änderungen am englischen Modus; Freigabe durch fachliche und sprachliche QA.
 
+## Umsetzungsschritt November 2026 — Freigaben-UX (P0-Teilumfang)
+
+- [x] **#1 Tastaturbedienung im Freigabe-Workflow:** A = Genehmigen, R = Ablehnen (beide mit ausdrücklicher Bestätigung), N/P = Nächste/Vorherige Freigabe. Während der Texteingabe und laufenden Entscheidungen deaktiviert. Ausführung wird bei fehlender oder bereits entschiedener Freigabe unterbunden.
+- [x] **DE-DE-Teilumsetzung:** Freigabeansicht mit deutsch-/englischsprachigen UI-Texten, einschließlich Bedienungshinweisen, Fehlermeldungen, Tabellenbeschriftungen und Entscheidungsstatus. **Die vollständige Plattformlokalisierung bleibt offen.**
+- [ ] **#1 Abnahme:** Browser-/Tastatur-Tests für Fokuswechsel, Modaldialoge, Mehrfachaktionen, Screenreader sowie Produktiv-Rollen.
+- [ ] **DE-DE Gesamtumfang:** Weitere Oberflächen, Serverfehler, automatisch generierte Analystentexte, Bestätigungsmeldungen, zentrale i18n-Schlüssel und vollständige Sprach-QA.
+- [x] **#2 Smart Review Ordering – erste Version:** Auswählbare Reihenfolge nach transparenter Heuristik aus Schweregrad, Wartezeit, Belegen und Eskalationshinweis oder nach Erstellungszeit; Erläuterung direkt in der Queue. Kein kalibrierter Risikoscore.\n- [ ] **#2 Ausbau:** Asset-Kritikalität, verifizierte Detektionskonfidenz, übergreifende serverseitige Priorisierung, stabile Pagination und Performance-Tests.
+
 ## Next milestones
 
 | ID | Priority | Feature | Acceptance criteria |
 | --- | --- | --- | --- |
 | DE | P0 | Vollständige deutsche Lokalisierung | Gesamte Oberfläche, Meldungen, KI-Ausgaben und Dokumentation in de-DE; automatisierte Schlüsselprüfung und Sprach-QA |
-| 1 | P0 | Fast review keyboard shortcuts | A/R/N/P work outside text fields; confirmation for destructive operations; accessible focus states and no accidental submissions |
-| 2 | P0 | Smart review ordering | Configurable risk score combining severity, asset criticality, incident confidence and age; stable pagination with clear explanations |
+| 1 | P0 | Fast review keyboard shortcuts | **Implementiert (erste Version)**; Browser-/Screenreader-Abnahmetests noch offen |
+| 2 | P0 | Smart review ordering | **Basis umgesetzt** (Schweregrad, Alter, Belege, transparente Sortierung); Asset-Kritikalität, kalibrierte Detektionskonfidenz und serverseitige Pagination offen |
 | 6 | P1 | Incident timeline | Windows Event 7040/7045, 4688, Sysmon, auth events and networking merged by verified time/source; explicit provenance and missing-data markers |
 | 7 | P0 | One-click context enrichment | Fetch correlated host/user/indicator history and asset vulnerabilities on demand; scoping, query limits and privacy controls |
 | 8 | P1 | Safe remediation scripts | Read-only diagnostics by default; human-reviewed code, dry-run where supported, validated signatures and role-based execution guard |
