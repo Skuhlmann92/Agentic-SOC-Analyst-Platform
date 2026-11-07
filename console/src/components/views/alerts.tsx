@@ -40,6 +40,9 @@ export function AlertsView() {
   const [eventType, setEventType] = useState("");
   const [sort, setSort] = useState("event_time");
   const [cursors, setCursors] = useState<string[]>([]);
+  const [advancedOpen,setAdvancedOpen]=useState(false);
+  const [groupsOpen,setGroupsOpen]=useState(false);
+  const [facetsOpen,setFacetsOpen]=useState(false);
   const cursor = cursors.at(-1);
 
   const params = useMemo(
@@ -89,9 +92,10 @@ export function AlertsView() {
       </div>
       <div className="panel mb-4 rounded-xl p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wide">{t("Erweiterter Drill-down","Advanced drill-down")}</h2>
+          <button type="button" aria-expanded={advancedOpen} onClick={()=>setAdvancedOpen(v=>!v)} className="text-xs font-bold uppercase tracking-wide text-accent">{advancedOpen?"▾":"▸"} {t("Weitere Filter","More filters")}</button>
           <button type="button" onClick={resetAll} className="text-xs font-semibold text-accent">{t("Alle Filter zurücksetzen","Clear all filters")}</button>
         </div>
+        {advancedOpen ? <>
         {from||to?<p className="mb-3 text-xs text-muted-foreground">{t("Zeitbereich (Berlin)","Selected time window (Berlin)")}: {from?formatTime(from):"—"} – {to?formatTime(to):"—"} <button className="ml-3 font-semibold text-accent" onClick={()=>{setFrom("");setTo("");resetPage();}}>{t("Zeitfilter entfernen","Remove time filter")}</button></p>:null}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <select className="field" value={host} onChange={e=>{setHost(e.target.value);resetPage();}} aria-label="Host"><option value="">{t("Alle Endgeräte","All hosts")}</option>{(facets.data?.host||[]).map(h=><option key={h.value} value={h.value}>{h.value}</option>)}</select>
@@ -99,15 +103,16 @@ export function AlertsView() {
           <select className="field" value={ruleLevel} onChange={e=>{setRuleLevel(e.target.value);resetPage();}} aria-label="Wazuh rule level"><option value="">{t("Alle Regel-Level","All rule levels")}</option>{Array.from({length:16},(_,level)=><option key={level} value={String(level)}>Level {level}</option>)}</select>
           <input className="field" value={technique} placeholder="MITRE ATT&CK ID (T1059)" onChange={e=>{setTechnique(e.target.value);resetPage();}}/>
         </div>
+        </> : null}
       </div>
       {correlated.data?.data?.length ? (
         <section className="panel mb-4 rounded-xl p-4">
-          <h2 className="mb-1 text-sm font-semibold">{t("Korrelierte Alarmgruppen","Correlated alert groups")}</h2>
+          <button type="button" aria-expanded={groupsOpen} className="flex w-full items-center justify-between text-left text-sm font-semibold" onClick={()=>setGroupsOpen(v=>!v)}><span>{t("Korrelierte Alarmgruppen","Correlated alert groups")} · {correlated.data.data.length}</span><span className="text-accent">{groupsOpen?"▾":"▸"}</span></button>
           <p className="mb-3 text-xs text-muted-foreground">{t(
             "Unbestätigte Zusammenhänge aus den letzten sieben Tagen (gleicher Host, gleiche Regel, Quelle und Stunde). Keine automatisch erstellten Incidents.",
             "Unconfirmed correlations over seven days (same host, rule, source and hour). Not auto-created incidents."
           )}</p>
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {groupsOpen?<div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {correlated.data.data.slice(0,12).map(group=>(
               <button type="button" key={`${group.host}:${group.rule_id}:${group.source}:${group.bucket}`}
                 className="rounded border border-border p-3 text-left text-sm hover:bg-white/5"
@@ -123,16 +128,19 @@ export function AlertsView() {
                 <span className="mt-1 block text-xs text-accent">{t("Gruppe untersuchen","Investigate group")}</span>
               </button>
             ))}
-          </div>
+          </div>:null}
         </section>
       ):null}
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+      <div className={`grid gap-4 ${facetsOpen?"lg:grid-cols-[220px_minmax(0,1fr)]":"lg:grid-cols-[minmax(0,1fr)]"}`}>
         <aside className="space-y-4">
+          <button type="button" className="w-full rounded-lg border border-border p-2 text-left text-xs font-semibold text-accent" onClick={()=>setFacetsOpen(v=>!v)} aria-expanded={facetsOpen}>{facetsOpen?t("Facetten ausblenden","Hide facets"):t("Facetten anzeigen","Show facets")}</button>
+          {facetsOpen?<>
           <FacetGroup title={t("Priorität","Severity")} buckets={facets.data?.severity} active={severity} onPick={(value) => { setSeverity(value === severity ? "" : value); resetPage(); }} />
           <FacetGroup title={t("Quelle","Source")} buckets={facets.data?.source} active={source} onPick={(value) => { setSource(value === source ? "" : value); resetPage(); }} />
           <FacetGroup title={t("Ereignistyp","Event type")} buckets={facets.data?.event_type} active={eventType} onPick={(value) => { setEventType(value === eventType ? "" : value); resetPage(); }} />
           <FacetGroup title={t("Endgerät","Host")} buckets={facets.data?.host} active={host} onPick={(value) => {setHost(host===value?"":value);resetPage();}} />
           <FacetGroup title={t("Nutzer","User")} buckets={facets.data?.user} active="" onPick={(value) => router.push(`/entities?type=user&q=${encodeURIComponent(value)}`)} />
+          </>:null}
         </aside>
         <section>
           {alerts.isLoading ? <LoadingBlock label={t("Lade Meldungen","Loading alerts")} /> : null}
@@ -156,14 +164,14 @@ export function AlertsView() {
                 </thead>
                 <tbody>
                   {alerts.data.data.map((alert) => (
-                    <tr key={alert.id} onClick={() => router.push(`/alerts/${alert.id}`)}>
+                    <tr key={alert.id}>
                       <td>
-                        <p className="font-medium">{alert.title}</p>
+                        <a className="font-medium text-accent hover:underline focus-visible:underline" href={`/alerts/${alert.id}`}>{alert.title}</a>
                         <p className="text-xs text-muted-foreground">{label(alert.source)} · {alert.rule_name || "no rule name"}</p>
                       </td>
                       <td><StatusBadge value={alert.severity} /></td>
                       <td><StatusBadge value={alert.status} /></td>
-                      <td>{alert.hostname || "—"}</td>
+                      <td>{alert.hostname?<a className="font-semibold text-accent hover:underline" href={`/assets/${encodeURIComponent(alert.hostname)}`}>{alert.hostname}</a>:"—"}</td>
                       <td className="whitespace-nowrap font-mono text-xs">{formatTime(alert.detected_at)}</td>
                     </tr>
                   ))}

@@ -36,8 +36,8 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
  const investigations=useQuery({queryKey:["dashboard","investigations"],queryFn:()=>sdk.listInvestigations({limit:100})});
  const queries=[alerts,timeline,facets,cases,reviews,investigations];
  const failed=queries.find(q=>q.isError);
- if(failed?.isError)return <ErrorState message={failed.error instanceof ApiClientError?failed.error.message:t("Dashboard konnte nicht geladen werden.","Dashboard could not be loaded.")} onRetry={()=>failed.refetch()}/>;
- if(queries.some(q=>q.isLoading))return <LoadingBlock label={t("Lade Sicherheitsübersicht","Loading security overview")}/>;
+ // Keep healthy widgets visible even when another upstream endpoint is unavailable.
+ // Only show loading placeholders for sections whose data is not ready.
  const severity=(facets.data?.severity??[]).filter(x=>x.count>0).map(x=>({name:x.value,value:x.count,color:COLOR[x.value]||COLOR.unknown}));
  const total=severity.reduce((sum,x)=>sum+x.value,0);
  const critical=severity.filter(x=>x.name==="critical"||x.name==="high").reduce((sum,x)=>sum+x.value,0);
@@ -46,12 +46,16 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
  const pending=reviews.data?.data.length??0;
  const newest=alerts.data?.data[0]?.detected_at;
  const kpis=[
- {title:t("Sicherheitsmeldungen","Security alerts"),number:total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
- {title:t("Hohe Priorität","High priority"),number:critical.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("High + Critical, keine bestätigten Vorfälle","High + critical, not confirmed incidents"),icon:ShieldAlert,accent:"#ed7386",href:"/alerts"},
- {title:t("Aktive Fälle","Active cases"),number:countLabel(runningCases,Boolean(cases.data?.page.has_more)),sub:t("Offen oder in Bearbeitung","Open or investigating"),icon:Briefcase,accent:"#609ee8",href:"/cases"},
- {title:t("Warten auf Freigabe","Awaiting approval"),number:countLabel(pending,Boolean(reviews.data?.page.has_more)),sub:t("KI- und Analyseentwürfe","AI and investigation drafts"),icon:Clock3,accent:"#e5af53",href:"/reviews"},
+ {title:t("Sicherheitsmeldungen","Security alerts"),number:facets.isLoading?"…":facets.isError?"—":total.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("Gesamtbestand aller Quellen","Across all ingested sources"),icon:Bell,accent:"hsl(var(--accent))",href:"/alerts"},
+ {title:t("Hohe Priorität","High priority"),number:facets.isLoading?"…":critical.toLocaleString(locale==="de"?"de-DE":"en-US"),sub:t("High + Critical, keine bestätigten Vorfälle","High + critical, not confirmed incidents"),icon:ShieldAlert,accent:"#ed7386",href:"/alerts"},
+ {title:t("Aktive Fälle","Active cases"),number:cases.isLoading?"…":countLabel(runningCases,Boolean(cases.data?.page.has_more)),sub:t("Offen oder in Bearbeitung","Open or investigating"),icon:Briefcase,accent:"#609ee8",href:"/cases"},
+ {title:t("Warten auf Freigabe","Awaiting approval"),number:reviews.isLoading?"…":countLabel(pending,Boolean(reviews.data?.page.has_more)),sub:t("KI- und Analyseentwürfe","AI and investigation drafts"),icon:Clock3,accent:"#e5af53",href:"/reviews"},
  ];
  return <div className="space-y-7">
+  {failed?.isError?<div role="alert" className="rounded-xl border border-warning/40 bg-warning/5 p-3 text-sm">
+    {t("Einzelne Datenquellen sind derzeit nicht erreichbar. Verfügbare Kennzahlen bleiben sichtbar.","Some data sources are unavailable. Available metrics remain visible.")}
+    <button className="ml-3 font-semibold text-accent" onClick={()=>failed.refetch()}>{t("Erneut versuchen","Retry")}</button>
+  </div>:null}
   <section className="flex flex-wrap items-start justify-between gap-4">
    <div>
     <div className="mb-2 flex items-center gap-2">
@@ -66,6 +70,23 @@ export function DashboardView({workspace="other"}:{workspace?:"demo"|"live"|"oth
    <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-xs font-semibold hover:border-accent/50" onClick={()=>client.invalidateQueries({queryKey:["dashboard"]})}>
     <RefreshCcw size={14}/>{t("Aktualisieren","Refresh")}
    </button>
+  </section>
+  <section className="panel rounded-2xl p-4 sm:p-5" aria-label={t("Jetzt bearbeiten","Your next actions")}>
+   <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-bold">{t("Jetzt bearbeiten","What needs attention")}</h3><span className="text-xs text-muted-foreground">{t("Direkt zum nächsten Arbeitsschritt","Go straight to the next task")}</span></div>
+   <div className="grid gap-2 sm:grid-cols-3">
+    <Link href="/reviews" className="rounded-xl border border-border p-4 transition hover:border-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+     <span className="block text-xs text-muted-foreground">{t("Freigaben prüfen","Review drafts")}</span><strong className="mt-1 block text-xl">{reviews.isLoading?"…":countLabel(pending,Boolean(reviews.data?.page.has_more))}</strong>
+     <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">{t("Warteschlange öffnen","Open queue")} <ArrowRight size={13}/></span>
+    </Link>
+    <Link href="/alerts?severity=critical" className="rounded-xl border border-border p-4 transition hover:border-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+     <span className="block text-xs text-muted-foreground">{t("Kritische Meldungen untersuchen","Investigate critical alerts")}</span><strong className="mt-1 block text-xl">{facets.isLoading?"…":(facets.data?.severity??[]).find(x=>x.value==="critical")?.count??0}</strong>
+     <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">{t("Meldungen öffnen","Open alerts")} <ArrowRight size={13}/></span>
+    </Link>
+    <Link href="/cases" className="rounded-xl border border-border p-4 transition hover:border-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+     <span className="block text-xs text-muted-foreground">{t("Aktive Vorfälle","Active cases")}</span><strong className="mt-1 block text-xl">{cases.isLoading?"…":countLabel(runningCases,Boolean(cases.data?.page.has_more))}</strong>
+     <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">{t("Fälle öffnen","Open cases")} <ArrowRight size={13}/></span>
+    </Link>
+   </div>
   </section>
   <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
    {kpis.map(k=>{const Icon=k.icon;return <Link href={k.href} key={k.title} className="panel soc-kpi rounded-2xl p-5" style={{"--kpi-line":k.accent} as React.CSSProperties}>

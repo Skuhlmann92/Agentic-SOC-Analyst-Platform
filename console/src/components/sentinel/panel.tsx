@@ -24,7 +24,7 @@ export function Sentinel({ role }: { role: Role }) {
   const guide = guideFor(pathname);
   const panelId = useId();
   const [ready, setReady] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [appearance, setAppearance] = useState<Appearance>("system");
   const [resolved, setResolved] = useState<"dark" | "light">("dark");
   const [section, setSection] = useState(0);
@@ -166,13 +166,13 @@ function canFollow(link: GuideLink, role: Role) {
 function readPersisted(): Persisted {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return { open: true, appearance: "system" };
+    if (!raw) return { open: false, appearance: "system" };
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     const appearance = parsed.appearance === "light" || parsed.appearance === "dark" || parsed.appearance === "system"
       ? parsed.appearance
       : "system";
     return { open: parsed.open !== false, appearance };
   } catch {
-    return { open: true, appearance: "system" };
+    return { open: false, appearance: "system" };
   }
 }
