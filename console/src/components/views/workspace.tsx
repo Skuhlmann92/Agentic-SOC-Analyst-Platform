@@ -39,6 +39,7 @@ function Workspace() {
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
   const selected = search.get("run") || "";
+  const recentAlerts=useQuery({queryKey:["workspace","selectable-alerts"],queryFn:()=>sdk.searchAlerts({limit:50,sort:"event_time"})});
   const runs = useQuery({ queryKey: ["workspace-runs"], queryFn: () => sdk.listRuns({ limit: 20 }) });
   const run = useQuery({ queryKey: ["run", selected], queryFn: () => sdk.getRun(selected), enabled: Boolean(selected) });
   const start = useMutation({
@@ -72,7 +73,15 @@ function Workspace() {
             <h2 className="text-sm font-medium">{t("Untersuchung starten","Run investigation")}</h2>
             <label className="mt-3 block text-xs text-muted-foreground">
               {t("Alert-ID","Alert ID")}
-              <input className="field mt-1 font-mono" value={alertId} onChange={(event) => setAlertId(event.target.value)} />
+              <select className="field mt-1 w-full" aria-label={t("Sicherheitsmeldung auswählen","Select alert")}
+                value={(recentAlerts.data?.data??[]).some(item=>item.id===alertId)?alertId:""}
+                onChange={event=>{setAlertId(event.target.value);setQuestion("");}}>
+                <option value="">{t("Aktuelle Meldung auswählen (optional)","Select a recent alert (optional)")}</option>
+                {(recentAlerts.data?.data??[]).map(item=><option key={item.id} value={item.id}>{item.title.slice(0,68)} · {item.hostname||"—"}</option>)}
+              </select>
+              <input className="field mt-2 font-mono text-xs" aria-label={t("Alert-ID manuell eingeben","Enter alert ID manually")}
+                placeholder={t("Oder Alert-ID einfügen","Or paste an alert ID")} value={alertId} onChange={event=>setAlertId(event.target.value)}/>
+              {recentAlerts.isError?<span className="mt-1 block text-xs text-muted-foreground">{t("Alert-Auswahl nicht erreichbar. Die ID-Eingabe funktioniert weiterhin.","Alert list unavailable. You can still paste an ID.")}</span>:null}
             </label>
             <label className="mt-3 block text-xs text-muted-foreground">
               {t("Oder Frage zu gespeicherten Ereignissen","Or a question about stored records")}
@@ -85,7 +94,7 @@ function Workspace() {
           </form>
           <div className="panel rounded-lg p-3">
             <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("Letzte Analysen","Recent runs")}</p>
-            {runs.isLoading ? <p className="text-sm text-muted-foreground">Loading runs</p> : null}
+            {runs.isLoading ? <p className="text-sm text-muted-foreground">{t("Analysen werden geladen …","Loading runs …")}</p> : null}
             {runs.data && runs.data.data.length === 0 ? <p className="text-sm text-muted-foreground">{t("Noch keine Analysen vorhanden. Ergebnisse werden als freigabepflichtige Entwürfe gespeichert.","No investigations yet. Drafts require human approval.")}</p> : null}
             <ul className="max-h-[44vh] space-y-1 overflow-y-auto pr-1">
               {(runs.data?.data ?? []).map((item) => (
