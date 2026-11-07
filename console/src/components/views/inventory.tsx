@@ -1,7 +1,6 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import Link from "next/link";
-import {useSearchParams} from "next/navigation";
 import {useQuery} from "@tanstack/react-query";
 import {PageHeader} from "@/components/page-header";
 import {usePreferences} from "@/lib/preferences";
@@ -10,11 +9,15 @@ type Software={name:string;version:string;publisher:string};
 type Host={hostname:string;received_at:string;complete:boolean;collection_scope:string;software_count:number;software:Software[];os:{name:string;version:string;build:string;architecture:string;kernel:string};hardware:{cpu:string;memory_bytes:number;processor_count:number}};
 type Data={generated_at:string;source:string;wazuh_syscollector_connected:boolean;cve_source_connected:boolean;data:Host[]};
 export function InventoryView(){
- const {t}=usePreferences();const params=useSearchParams();const [host,setHost]=useState(params.get("host")||"all");const [term,setTerm]=useState("");
+ const {t}=usePreferences();const [host,setHost]=useState("all");const [term,setTerm]=useState("");
  const query=useQuery({queryKey:["endpoint-inventory"],queryFn:async()=>{
   const r=await fetch("/api/endpoint-inventory",{cache:"no-store"});if(!r.ok)throw Error("Inventory API HTTP "+r.status);
   return await r.json() as Data;
  },refetchInterval:300000});
+ useEffect(()=>{
+  const initial=new URLSearchParams(window.location.search).get("host");
+  if(initial)setHost(initial);
+ },[]);
  const all=query.data?.data||[];
  const hosts=all.filter(x=>host==="all"||x.hostname===host);
  const packages=hosts.flatMap(x=>(x.software||[]).filter(p=>(p.name+" "+p.version+" "+p.publisher).toLowerCase().includes(term.toLowerCase())).map(p=>({...p,hostname:x.hostname}))).sort((a,b)=>a.name.localeCompare(b.name));
