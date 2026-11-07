@@ -90,11 +90,12 @@ export function AlertsView() {
           ))}
         </select>
       </div>
-      <details className="panel mb-4 rounded-xl p-4" open={advancedOpen} onToggle={e=>setAdvancedOpen(e.currentTarget.open)}>
+      <div className="panel mb-4 rounded-xl p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <button type="button" aria-expanded={advancedOpen} onClick={()=>setAdvancedOpen(v=>!v)} className="text-xs font-bold uppercase tracking-wide text-accent">{advancedOpen?"▾":"▸"} {t("Weitere Filter","More filters")}</button>
           <button type="button" onClick={resetAll} className="text-xs font-semibold text-accent">{t("Alle Filter zurücksetzen","Clear all filters")}</button>
         </div>
+        {advancedOpen ? <>
         {from||to?<p className="mb-3 text-xs text-muted-foreground">{t("Zeitbereich (Berlin)","Selected time window (Berlin)")}: {from?formatTime(from):"—"} – {to?formatTime(to):"—"} <button className="ml-3 font-semibold text-accent" onClick={()=>{setFrom("");setTo("");resetPage();}}>{t("Zeitfilter entfernen","Remove time filter")}</button></p>:null}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <select className="field" value={host} onChange={e=>{setHost(e.target.value);resetPage();}} aria-label="Host"><option value="">{t("Alle Endgeräte","All hosts")}</option>{(facets.data?.host||[]).map(h=><option key={h.value} value={h.value}>{h.value}</option>)}</select>
@@ -102,7 +103,8 @@ export function AlertsView() {
           <select className="field" value={ruleLevel} onChange={e=>{setRuleLevel(e.target.value);resetPage();}} aria-label="Wazuh rule level"><option value="">{t("Alle Regel-Level","All rule levels")}</option>{Array.from({length:16},(_,level)=><option key={level} value={String(level)}>Level {level}</option>)}</select>
           <input className="field" value={technique} placeholder="MITRE ATT&CK ID (T1059)" onChange={e=>{setTechnique(e.target.value);resetPage();}}/>
         </div>
-      </details>
+        </> : null}
+      </div>
       {correlated.data?.data?.length ? (
         <section className="panel mb-4 rounded-xl p-4">
           <button type="button" aria-expanded={groupsOpen} className="flex w-full items-center justify-between text-left text-sm font-semibold" onClick={()=>setGroupsOpen(v=>!v)}><span>{t("Korrelierte Alarmgruppen","Correlated alert groups")} · {correlated.data.data.length}</span><span className="text-accent">{groupsOpen?"▾":"▸"}</span></button>
@@ -129,7 +131,7 @@ export function AlertsView() {
           </div>:null}
         </section>
       ):null}
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+      <div className={`grid gap-4 ${facetsOpen?"lg:grid-cols-[220px_minmax(0,1fr)]":"lg:grid-cols-[minmax(0,1fr)]"}`}>
         <aside className="space-y-4">
           <button type="button" className="w-full rounded-lg border border-border p-2 text-left text-xs font-semibold text-accent" onClick={()=>setFacetsOpen(v=>!v)} aria-expanded={facetsOpen}>{facetsOpen?t("Facetten ausblenden","Hide facets"):t("Facetten anzeigen","Show facets")}</button>
           {facetsOpen?<>
