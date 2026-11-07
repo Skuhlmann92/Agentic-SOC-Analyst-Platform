@@ -21,7 +21,7 @@ export function EndpointStatusView(){
   {query.isError?<p className="text-sm text-danger">{t("Endgerätedaten nicht erreichbar.","Endpoint data unavailable.")}</p>:null}
   <section className="grid gap-4 lg:grid-cols-2">{(query.data?.hosts||[]).map(host=><div className="panel rounded-2xl p-5" key={host.hostname}>
    <div className="flex items-start justify-between gap-3">
-    <div className="flex items-center gap-3"><div className="rounded-xl bg-accent/10 p-3 text-accent"><HardDrive size={21}/></div><div><h2 className="text-base font-semibold">{host.hostname}</h2><p className="mt-1 text-xs text-muted-foreground">{host.os||t("Betriebssystem noch unbekannt","OS not reported")}</p></div></div>
+    <div className="flex items-center gap-3"><div className="rounded-xl bg-accent/10 p-3 text-accent"><HardDrive size={21}/></div><div><h2 className="text-base font-semibold"><Link className="text-accent hover:underline" href={`/assets/${encodeURIComponent(host.hostname)}`}>{host.hostname}</Link></h2><p className="mt-1 text-xs text-muted-foreground">{host.os||t("Betriebssystem noch unbekannt","OS not reported")}</p></div></div>
     <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${host.heartbeat_status==="recent"?"border-ok/30 bg-ok/10 text-ok":"border-warning/30 bg-warning/10 text-warning"}`}>{host.heartbeat_status==="recent"?t("Heartbeat aktuell","Heartbeat recent"):host.heartbeat_status==="stale"?t("Heartbeat veraltet","Heartbeat stale"):t("Nicht eingerichtet","Not configured")}</span>
    </div>
    <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -33,7 +33,7 @@ export function EndpointStatusView(){
     <div><p className="text-xs text-muted-foreground">{t("Alerts gesamt","Total alerts")}</p><p className="mt-1 text-xl font-semibold">{host.alerts_total}</p></div>
    </div>
    {host.wazuh_manager_service?<p className="mt-3 text-xs text-muted-foreground">Wazuh Manager Service: {host.wazuh_manager_service}</p>:null}
-   <div className="mt-4 flex flex-wrap gap-3 border-t border-border pt-4 text-xs"><span className="text-muted-foreground">{t("Letzter Alert","Last alert")}: {formatTime(host.last_alert)}</span><Link href={`/alerts?host=${encodeURIComponent(host.hostname)}`} className="ml-auto font-semibold text-accent">{t("Alerts untersuchen","Investigate alerts")}</Link></div>
+   <div className="mt-4 flex flex-wrap gap-3 border-t border-border pt-4 text-xs"><span className="text-muted-foreground">{t("Letzter Alert","Last alert")}: {formatTime(host.last_alert)}</span><Link href={`/assets/${encodeURIComponent(host.hostname)}`} className="font-semibold text-accent">{t("Hostprofil","Host profile")}</Link><Link href={`/alerts?host=${encodeURIComponent(host.hostname)}`} className="ml-auto font-semibold text-accent">{t("Alerts untersuchen","Investigate alerts")}</Link></div>
   </div>)}</section>
  </div>;
 }
