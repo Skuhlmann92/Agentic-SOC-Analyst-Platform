@@ -54,19 +54,19 @@ export function ReviewsView() {
       } catch {
         // Do not navigate using a stale queue if the refresh failed.
         setSelected("");
-        setError("Entscheidung gespeichert, aber die Warteschlange konnte nicht aktualisiert werden. Bitte neu laden.");
+        setError(t("Entscheidung gespeichert, aber die Warteschlange konnte nicht aktualisiert werden. Bitte neu laden.","Decision saved, but the pending queue could not be refreshed. Reload the queue to continue."));
       }
     },
     onError: async (reason) => {
       if (reason instanceof ApiClientError && reason.status === 409) {
         // Another reviewer got there first: reload the truth from the server.
         setNote("");
-        setError("This draft was already decided by another reviewer. The queue has been refreshed.");
+        setError(t("Diese Freigabe wurde bereits von jemand anderem entschieden. Die Liste wurde aktualisiert.","This draft was already decided by another reviewer. The queue has been refreshed."));
         await client.invalidateQueries({ queryKey: ["reviews"] });
         await client.invalidateQueries({ queryKey: ["draft", selected] });
         return;
       }
-      setError(reason instanceof ApiClientError ? reason.message : "The decision was not recorded.");
+      setError(reason instanceof ApiClientError ? reason.message : t("Die Entscheidung konnte nicht gespeichert werden.","The decision was not recorded."));
     },
   });
 
@@ -96,7 +96,7 @@ export function ReviewsView() {
       setSelected(refreshed.data[0]?.id??"");
     },
     onError: async (reason) => {
-      setError(reason instanceof ApiClientError?reason.message:"Bulk decision failed.");
+      setError(reason instanceof ApiClientError?reason.message:t("Sammelentscheidung fehlgeschlagen.","Bulk decision failed."));
       await client.invalidateQueries({queryKey:["reviews"]});
       setBulkIds([]);
     }
@@ -167,7 +167,7 @@ export function ReviewsView() {
                 </div>
                 {members.map(item=>(
                   <div key={item.id} className="flex items-center gap-2">
-                    <input type="checkbox" aria-label={`Select ${item.title}`} checked={bulkIds.includes(item.id)}
+                    <input type="checkbox" aria-label={`${t("Auswählen","Select")} ${item.title}`} checked={bulkIds.includes(item.id)}
                       onChange={e=>setBulkIds(old=>e.target.checked?[...new Set([...old,item.id])]:old.filter(id=>id!==item.id))}/>
                     <button className={`min-w-0 flex-1 rounded px-2 py-2 text-left text-sm hover:bg-white/5 ${selected===item.id?"bg-accent/10":""}`}
                       onClick={()=>setSelected(item.id)}>
@@ -185,10 +185,10 @@ export function ReviewsView() {
               {!validBulk?<p className="mt-1 text-xs text-danger">{t("Mindestens zwei passende offene Freigaben auswählen (maximal 20).","Select at least two matching pending approvals (max 20).")}</p>:null}
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button disabled={!validBulk||bulk.isPending||decide.isPending} onClick={()=>{
-                  if(window.confirm(`Approve ${bulkIds.length} selected drafts? Each draft receives a separately recorded decision.`))bulk.mutate("approved");
+                  if(window.confirm(t(`${bulkIds.length} Freigaben wirklich genehmigen? Jede Entscheidung wird einzeln gespeichert.`,`Approve ${bulkIds.length} selected drafts? Each draft receives a separately recorded decision.`)))bulk.mutate("approved");
                 }}>{t("Ausgewählte genehmigen","Approve selected")}</Button>
                 <Button variant="danger" disabled={!validBulk||bulk.isPending||decide.isPending} onClick={()=>{
-                  if(window.confirm(`Reject ${bulkIds.length} selected drafts?`))bulk.mutate("rejected");
+                  if(window.confirm(t(`${bulkIds.length} Freigaben wirklich ablehnen?`,`Reject ${bulkIds.length} selected drafts?`)))bulk.mutate("rejected");
                 }}>{t("Ausgewählte ablehnen","Reject selected")}</Button>
                 <Button variant="secondary" onClick={()=>setBulkIds([])}>{t("Auswahl aufheben","Clear")}</Button>
               </div>
