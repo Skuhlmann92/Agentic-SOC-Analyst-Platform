@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
+import {usePreferences} from "@/lib/preferences";
 import { StatusBadge } from "@/components/severity";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import { ApiClientError, sdk } from "@/lib/sdk/client";
 
 export function AdminView() {
   const client = useQueryClient();
+  const {t}=usePreferences();
+  const [tab,setTab]=useState<"connectors"|"errors"|"replay"|"audit">("connectors");
   const [sourceRecordId, setSourceRecordId] = useState("");
   const [replayMessage, setReplayMessage] = useState("");
   const connectors = useQuery({ queryKey: ["admin", "connectors"], queryFn: () => sdk.connectors() });
@@ -41,11 +44,17 @@ export function AdminView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Administration"
-        detail="Connector receipts, dead-letter metadata, replay of stored bytes, and the human decision record. Payloads are not shown."
+        title={t("Verwaltung","Administration")}
+        detail={t("Datenquellen, Verarbeitung, kontrollierter Replay und gespeicherte Entscheidungen.","Data sources, processing, controlled replay and recorded decisions.")}
       />
-      <section>
-        <h2 className="mb-3 text-sm font-medium">Connector health</h2>
+      <nav className="flex flex-wrap gap-2 border-b border-border pb-3" aria-label={t("Verwaltungsbereiche","Administration sections")}>
+       {([{id:"connectors",de:"Datenquellen",en:"Connectors"},{id:"errors",de:"Verarbeitungsfehler",en:"Processing errors"},{id:"replay",de:"Replay",en:"Replay"},{id:"audit",de:"Entscheidungen & Audit",en:"Decisions & audit"}] as const).map(item=>(
+        <button key={item.id} type="button" aria-pressed={tab===item.id} onClick={()=>setTab(item.id)}
+          className={`rounded-lg border px-4 py-2 text-sm font-semibold ${tab===item.id?"border-accent bg-accent/10 text-accent":"border-border hover:border-accent/50"}`}>{t(item.de,item.en)}</button>
+       ))}
+      </nav>
+      {tab==="connectors"?<section>
+        <h2 className="mb-3 text-sm font-medium">{t("Status der Datenquellen","Connector health")}</h2>
         {connectors.isLoading ? <LoadingBlock label="Loading connectors" /> : null}
         {connectors.isError ? <ErrorState message={connectors.error instanceof ApiClientError ? connectors.error.message : "Connectors could not be loaded."} onRetry={() => connectors.refetch()} /> : null}
         <div className="grid gap-3 md:grid-cols-3">
@@ -59,20 +68,20 @@ export function AdminView() {
             </article>
           ))}
         </div>
-      </section>
-      <section className="panel rounded-lg p-4">
-        <h2 className="text-sm font-medium">Replay</h2>
+      </section>:null}
+      {tab==="replay"?<section className="panel rounded-lg p-4">
+        <h2 className="text-sm font-medium">{t("Gespeicherte Quelldaten erneut verarbeiten","Replay stored source data")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">Re-project one source record from the bytes stored at intake. This does not accept a new payload.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <input className="field max-w-lg font-mono" placeholder="source record id" value={sourceRecordId} onChange={(event) => setSourceRecordId(event.target.value)} />
+          <input className="field max-w-lg font-mono" aria-label={t("Quell-ID für Replay","Source record ID for replay")} placeholder={t("Quell-ID","Source record ID")} value={sourceRecordId} onChange={(event) => setSourceRecordId(event.target.value)} />
           <Button disabled={replay.isPending || !sourceRecordId.trim()} onClick={() => replay.mutate()}>
             {replay.isPending ? "Replaying" : "Replay stored bytes"}
           </Button>
         </div>
         {replayMessage ? <p className="mt-2 text-sm text-muted-foreground">{replayMessage}</p> : null}
-      </section>
-      <section>
-        <h2 className="mb-3 text-sm font-medium">Dead letters</h2>
+      </section>:null}
+      {tab==="errors"?<section>
+        <h2 className="mb-3 text-sm font-medium">{t("Fehlerhafte Verarbeitungen","Dead letters")}</h2>
         {letters.isLoading ? <LoadingBlock label="Loading dead letters" /> : null}
         {letters.isError ? <ErrorState message={letters.error instanceof ApiClientError ? letters.error.message : "Dead letters could not be loaded."} onRetry={() => letters.refetch()} /> : null}
         {letters.data && letters.data.data.length === 0 ? <EmptyState title="No dead letters" body="Parse, publish, and replay failures will appear here." /> : null}
@@ -100,20 +109,20 @@ export function AdminView() {
                     <td className="font-mono">{item.attempt_count}</td>
                     <td className="font-mono text-xs">{formatTime(item.created_at)}</td>
                     <td className="font-mono text-xs">{formatTime(item.resolved_at)}</td>
-                    <td>{item.source_record_id ? <Button size="sm" variant="secondary">Use for replay</Button> : null}</td>
+                    <td>{item.source_record_id ? <Button size="sm" variant="secondary">{t("Für Replay übernehmen","Use for replay")}</Button> : null}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : null}
-      </section>
-      <section>
-        <h2 className="mb-3 text-sm font-medium">Audit</h2>
+      </section>:null}
+      {tab==="audit"?<section>
+        <h2 className="mb-3 text-sm font-medium">{t("Gespeicherte Entscheidungen und Veröffentlichungen","Recorded decisions and publications")}</h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Human decisions</h3>
-            {audit.length === 0 ? <EmptyState title="No decisions" body="Draft approvals and rejections are the human audit record." /> : null}
+            {audit.length === 0 ? <EmptyState title="No decisions" body="Stored approval and rejection decisions. An append-only audit trail remains planned." /> : null}
             {audit.length > 0 ? (
               <div className="panel overflow-hidden rounded-lg">
                 <table className="data-table">
@@ -165,7 +174,7 @@ export function AdminView() {
             ) : null}
           </div>
         </div>
-      </section>
+      </section>:null}
     </div>
   );
 }
