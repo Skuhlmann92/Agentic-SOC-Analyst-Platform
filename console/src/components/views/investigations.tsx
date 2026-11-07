@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +14,6 @@ import { ApiClientError, sdk } from "@/lib/sdk/client";
 const STATUSES = ["", "open", "active", "blocked", "closed"];
 
 export function InvestigationsView() {
-  const router = useRouter();
   const [status, setStatus] = useState("");
   const [cursors, setCursors] = useState<string[]>([]);
   const cursor = cursors.at(-1);
@@ -54,9 +53,9 @@ export function InvestigationsView() {
             </thead>
             <tbody>
               {rows.data.data.map((item) => (
-                <tr key={item.id} onClick={() => router.push(`/investigations/${item.id}`)}>
+                <tr key={item.id}>
                   <td>
-                    <p className="font-medium">{item.title}</p>
+                    <Link className="font-medium text-accent hover:underline" href={`/investigations/${item.id}`}>{item.title}</Link>
                     <p className="line-clamp-1 text-xs text-muted-foreground">{item.hypothesis || "No hypothesis"}</p>
                   </td>
                   <td><StatusBadge value={item.status} /></td>
