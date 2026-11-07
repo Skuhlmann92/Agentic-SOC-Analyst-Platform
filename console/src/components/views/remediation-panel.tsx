@@ -20,7 +20,7 @@ async function request<T>(method:"GET"|"POST",body?:object):Promise<T>{
  if(!response.ok)throw new Error(result?.error?.message||"Remediation API failed");
  return result as T;
 }
-export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
+export function RemediationPanel({initialAlert="",compact=false}:{initialAlert?:string;compact?:boolean}){
  const qc=useQueryClient();
  const {t}=usePreferences();
  const [alertId,setAlertId]=useState(initialAlert);
@@ -43,11 +43,11 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
  const hosts=listing.data?.eligible_hosts||[];
  useEffect(()=>{if(!host&&hosts.length)setHost(hosts[0].hostname);},[host,hosts]);
  const selectedDraft=(listing.data?.data||[]).find(d=>d.id===selected)||listing.data?.data[0];
- return <section className="mt-6 space-y-4">
+ return <section className={`${compact?"":"mt-6"} min-w-0 space-y-4`}>
   <div className="panel rounded-lg p-4">
    <h2 className="text-base font-semibold">{t("Claude PowerShell-Behebungsagent","Claude PowerShell Remediation Agent")}</h2>
    <p className="mt-1 text-sm text-muted-foreground">{t("KI erstellt Vorschläge. Keine SSH-Ausführung und kein automatischer Eingriff. Wazuh-Level 0–6 können zu einem Skript gebündelt werden. Höhere Level nur als Einzeldiagnose.","Claude drafts proposals only; no SSH execution. Wazuh levels 0–6 may be combined into one script. Higher levels are diagnostics-only.")}</p>
-   <div className="mt-4 grid gap-3 md:grid-cols-2">
+   <div className={`mt-4 grid gap-3 ${compact?"grid-cols-1":"md:grid-cols-2"}`}>
     <div>
      <label className="text-xs text-muted-foreground">{t("Windows-Host für Sammelbehebung (bis 8 Alerts)","Windows host for batch remediation (up to 8 alerts)")}</label>
      <select className="field mt-1 w-full" value={host} onChange={e=>setHost(e.target.value)}>
@@ -71,10 +71,10 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
   </div>
   {listing.isLoading?<p className="text-sm text-muted-foreground">{t("Lade Claude-Vorschläge ...","Loading Claude proposals ...")}</p>:null}
   {listing.isError?<p className="text-sm text-danger">{listing.error instanceof Error?listing.error.message:"Vorschläge nicht verfügbar"}</p>:null}
-  {(listing.data?.data.length||0)>0?<div className="grid gap-4 lg:grid-cols-[250px_1fr]">
+  {(listing.data?.data.length||0)>0?<div className={`grid min-w-0 gap-4 ${compact?"grid-cols-1":"lg:grid-cols-[250px_1fr]"}`}>
    <div className="panel rounded-lg p-3">
     <h3 className="mb-3 text-sm font-medium">{t("KI-Skriptvorschläge","AI script proposals")}</h3>
-    <div className="space-y-2">{listing.data?.data.map(d=><button type="button" key={d.id} onClick={()=>setSelected(d.id)}
+    <div className="max-h-48 space-y-2 overflow-y-auto pr-1">{listing.data?.data.map(d=><button type="button" key={d.id} onClick={()=>setSelected(d.id)}
      className={`w-full rounded p-2 text-left text-xs hover:bg-white/5 ${selectedDraft?.id===d.id?"bg-accent/10":""}`}>
      <span className="block font-semibold">{d.mode==="batch"?t("Sammelbehebung","Batch remediation"):t("Einzeldiagnose","Single diagnosis")} · {d.hostname}</span>
      <span className="block truncate text-muted-foreground">{d.summary}</span>
@@ -93,7 +93,7 @@ export function RemediationPanel({initialAlert=""}:{initialAlert?:string}){
      <h4 className="font-medium">{t("Vorgeschlagenes PowerShell-Skript","Proposed PowerShell script")}</h4>
      <Button variant="secondary" onClick={()=>navigator.clipboard.writeText(selectedDraft.powershell)}>{t("Skript kopieren","Copy script")}</Button>
     </div>
-    <pre className="overflow-auto rounded border border-border bg-black/40 p-4 text-xs leading-relaxed"><code>{selectedDraft.powershell}</code></pre>
+    <pre className="max-h-[320px] overflow-auto rounded border border-border bg-black/40 p-4 text-xs leading-relaxed"><code>{selectedDraft.powershell}</code></pre>
     <div><h4 className="text-sm font-medium">{t("Erfolgskontrolle","Verification")}</h4><pre className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{selectedDraft.verification}</pre></div>
     <div><h4 className="text-sm font-medium">{t("Rücknahme","Rollback")}</h4><pre className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{selectedDraft.rollback}</pre></div>
     <p className="text-sm text-muted-foreground">{selectedDraft.notes}</p>
