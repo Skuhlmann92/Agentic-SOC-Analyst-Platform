@@ -173,6 +173,6 @@ function readPersisted(): Persisted {
       : "system";
     return { open: parsed.open !== false, appearance };
   } catch {
-    return { open: true, appearance: "system" };
+    return { open: false, appearance: "system" };
   }
 }
