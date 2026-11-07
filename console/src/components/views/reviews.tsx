@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { formatTime, label } from "@/lib/format";
 import { ApiClientError, sdk } from "@/lib/sdk/client";
+import {reviewPriority,sortReviewQueue} from "@/lib/review-priority";
 
 export function ReviewsView() {
   const {t} = usePreferences();
@@ -18,6 +19,7 @@ export function ReviewsView() {
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [bulkIds,setBulkIds] = useState<string[]>([]);
+  const [queueOrder,setQueueOrder] = useState<"priority"|"newest">("priority");
   const client = useQueryClient();
   const queue = useQuery({
     queryKey: ["reviews", "pending"],
@@ -50,7 +52,7 @@ export function ReviewsView() {
           queryFn: () => sdk.listDrafts({ status: "pending_approval", limit: 50 }),
           staleTime: 0,
         });
-        setSelected(remaining.data.find((item) => item.id !== result.id)?.id ?? "");
+        setSelected(sortReviewQueue(remaining.data,queueOrder).find((item) => item.id !== result.id)?.id ?? "");
       } catch {
         // Do not navigate using a stale queue if the refresh failed.
         setSelected("");
@@ -70,7 +72,7 @@ export function ReviewsView() {
     },
   });
 
-  const pending = queue.data?.data ?? [];
+  const pending = sortReviewQueue(queue.data?.data ?? [],queueOrder);
   const selectedInfo = pending.find(item => item.id === selected);
   const grouped = new Map<string, typeof pending>();
   for (const item of pending) {
@@ -93,7 +95,7 @@ export function ReviewsView() {
         queryFn:()=>sdk.listDrafts({status:"pending_approval",limit:50}),
         staleTime:0
       });
-      setSelected(refreshed.data[0]?.id??"");
+      setSelected(sortReviewQueue(refreshed.data,queueOrder)[0]?.id??"");
     },
     onError: async (reason) => {
       setError(reason instanceof ApiClientError?reason.message:t("Sammelentscheidung fehlgeschlagen.","Bulk decision failed."));
@@ -154,6 +156,13 @@ export function ReviewsView() {
           {queue.isError ? <ErrorState message={queue.error instanceof ApiClientError ? queue.error.message : t("Die Freigaben konnten nicht geladen werden.","The queue could not be loaded.")} onRetry={() => queue.refetch()} /> : null}
           {queue.data && queue.data.data.length === 0 ? <EmptyState title={t("Keine offenen Freigaben","Queue is clear")} body={t("Es warten keine Freigaben auf eine Entscheidung.","No draft is waiting for a person.")} /> : null}
           <p className="mb-2 text-xs text-muted-foreground">{t("Gruppierungen sind nur Hinweise, keine bestätigten Vorfälle.","Grouping is a suggested correlation, not a confirmed incident.")}</p>
+          <div className="mb-3 flex items-center gap-2">
+            <label className="text-xs" htmlFor="review-order">{t("Sortierung","Sort by")}</label>
+            <select id="review-order" className="field flex-1" value={queueOrder} onChange={e=>setQueueOrder(e.target.value==="newest"?"newest":"priority")}>
+              <option value="priority">{t("Heuristische Priorität","Heuristic priority")}</option>
+              <option value="newest">{t("Neueste zuerst","Newest first")}</option>
+            </select>
+          </div>
           <div className="space-y-3">
             {[...grouped.entries()].map(([key,members]) => (
               <div key={key} className="rounded border border-border p-2">
@@ -173,6 +182,7 @@ export function ReviewsView() {
                       onClick={()=>setSelected(item.id)}>
                       <span className="block truncate">{item.title}</span>
                       <span className="text-xs text-muted-foreground">{label(item.severity)} · {formatTime(item.created_at)}</span>
+                      <span className="block text-xs text-muted-foreground" title={reviewPriority(item).explanation}>{t("Reihenfolge-Score","Ordering score")}: {reviewPriority(item).score} · {t("kein KI-Risiko-Wert","not an AI risk probability")}</span>
                     </button>
                   </div>
                 ))}
