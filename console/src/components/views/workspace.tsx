@@ -12,6 +12,14 @@ import { EmptyState, ErrorState, LoadingBlock } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { formatTime, label } from "@/lib/format";
 import { ApiClientError, sdk } from "@/lib/sdk/client";
+import Link from "next/link";
+
+type ClaudeAlertAnalysis={
+ alert_id:string;model:string;created_at:string;source:string;status:string;
+ summary:string;assessment:string;severity:string;hypotheses:string[];
+ benign_explanations:string[];recommended_checks:string[];
+ evidence_alert_ids:string[];limitations:string;evidence_count:number;notice:string
+};
 import type { Citation, Draft, Run } from "@/lib/sdk/types";
 
 const VALIDATION: Record<string, string> = {
@@ -38,10 +46,26 @@ function Workspace() {
   const [alertId, setAlertId] = useState(search.get("alert") || "");
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
+  const [aiResult,setAiResult] = useState<ClaudeAlertAnalysis|null>(null);
+  const [aiError,setAiError] = useState("");
   const selected = search.get("run") || "";
   const recentAlerts=useQuery({queryKey:["workspace","selectable-alerts"],queryFn:()=>sdk.searchAlerts({limit:50,sort:"event_time"})});
   const runs = useQuery({ queryKey: ["workspace-runs"], queryFn: () => sdk.listRuns({ limit: 20 }) });
   const run = useQuery({ queryKey: ["run", selected], queryFn: () => sdk.getRun(selected), enabled: Boolean(selected) });
+  const analyzeAlert=useMutation({
+    mutationFn:async()=>{
+      const response=await fetch("/api/alert-ai",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({alert_id:alertId.trim(),language:"de"})
+      });
+      const body=await response.json() as ClaudeAlertAnalysis&{error?:{message?:string}};
+      if(!response.ok)throw new Error(body.error?.message||"KI-Analyse fehlgeschlagen.");
+      return body;
+    },
+    onMutate:()=>{setAiError("");setAiResult(null);},
+    onSuccess:result=>setAiResult(result),
+    onError:error=>setAiError(error instanceof Error?error.message:"KI-Analyse fehlgeschlagen.")
+  });
   const start = useMutation({
     mutationFn: () => sdk.startRun(alertId.trim() ? { alert_id: alertId.trim() } : { question: question.trim() }),
     onSuccess: async (created) => {
@@ -75,12 +99,12 @@ function Workspace() {
               {t("Alert-ID","Alert ID")}
               <select className="field mt-1 w-full" aria-label={t("Sicherheitsmeldung auswählen","Select alert")}
                 value={(recentAlerts.data?.data??[]).some(item=>item.id===alertId)?alertId:""}
-                onChange={event=>{setAlertId(event.target.value);setQuestion("");}}>
+                onChange={event=>{setAlertId(event.target.value);setQuestion("");setAiResult(null);setAiError("");}}>
                 <option value="">{t("Aktuelle Meldung auswählen (optional)","Select a recent alert (optional)")}</option>
                 {(recentAlerts.data?.data??[]).map(item=><option key={item.id} value={item.id}>{item.title.slice(0,68)} · {item.hostname||"—"}</option>)}
               </select>
               <input className="field mt-2 font-mono text-xs" aria-label={t("Alert-ID manuell eingeben","Enter alert ID manually")}
-                placeholder={t("Oder Alert-ID einfügen","Or paste an alert ID")} value={alertId} onChange={event=>setAlertId(event.target.value)}/>
+                placeholder={t("Oder Alert-ID einfügen","Or paste an alert ID")} value={alertId} onChange={event=>{setAlertId(event.target.value);setAiResult(null);setAiError("");}}/>
               {recentAlerts.isError?<span className="mt-1 block text-xs text-muted-foreground">{t("Alert-Auswahl nicht erreichbar. Die ID-Eingabe funktioniert weiterhin.","Alert list unavailable. You can still paste an ID.")}</span>:null}
             </label>
             <label className="mt-3 block text-xs text-muted-foreground">
@@ -91,6 +115,11 @@ function Workspace() {
             <Button className="mt-3 w-full" disabled={start.isPending} type="submit">
               {start.isPending ? t("Läuft","Running") : t("Untersuchung ausführen","Run investigation")}
             </Button>
+            <Button className="mt-2 w-full" type="button" variant="secondary" disabled={!alertId.trim()||analyzeAlert.isPending}
+              onClick={()=>analyzeAlert.mutate()}>
+              {analyzeAlert.isPending?t("Claude analysiert den Alert …","Claude is analyzing the alert …"):t("Alert mit Claude analysieren","Analyze alert with Claude")}
+            </Button>
+            <p className="mt-2 text-xs text-muted-foreground">{t("Claude untersucht den Alert und passende Host-Meldungen. Die KI entscheidet und verändert keine Systeme.","Claude examines the alert and related host signals. AI does not decide cases or modify systems.")}</p>
           </form>
           <div className="panel rounded-lg p-3">
             <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">{t("Letzte Analysen","Recent runs")}</p>
@@ -116,6 +145,22 @@ function Workspace() {
           {!selected ? <EmptyState title={t("Keine Analyse ausgewählt","No run selected")} body={t("Analyse starten oder aus der Liste auswählen.","Start an investigation or choose a recent run.")} /> : null}
           {run.isLoading ? <LoadingBlock label="Loading run" /> : null}
           {run.isError ? <ErrorState message={run.error instanceof ApiClientError ? run.error.message : "The run could not be loaded."} onRetry={() => run.refetch()} /> : null}
+          {aiError?<div role="alert" className="mb-3 rounded-lg border border-danger/30 p-3 text-sm text-danger">{aiError}</div>:null}
+          {analyzeAlert.isPending?<LoadingBlock label={t("KI-Analyse läuft","Claude analysis in progress")} />:null}
+          {aiResult?<section className="panel mb-4 space-y-3 rounded-xl p-4" aria-label={t("Claude-Analyse","Claude analysis")}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+             <h3 className="text-base font-bold">{t("KI-Analyse des Alerts","AI alert analysis")}</h3>
+             <span className="rounded border border-warning/40 px-2 py-1 text-xs text-warning">{t("Nicht verifiziert","Unverified draft")}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Claude · {aiResult.model} · {formatTime(aiResult.created_at)} · {aiResult.evidence_count} {t("Meldungen berücksichtigt","alerts considered")}</p>
+            <h4 className="font-semibold">{t("Zusammenfassung","Summary")}</h4><p className="text-sm">{aiResult.summary}</p>
+            <h4 className="font-semibold">{t("Bewertung","Assessment")}</h4><p className="whitespace-pre-wrap text-sm">{aiResult.assessment}</p>
+            {([{label:t("Hypothesen","Hypotheses"),items:aiResult.hypotheses},{label:t("Mögliche harmlose Ursachen","Possible benign explanations"),items:aiResult.benign_explanations},{label:t("Nächste Prüfschritte (nur lesend)","Next read-only checks"),items:aiResult.recommended_checks}] as const).map(group=><div key={group.label}><h4 className="mb-1 text-sm font-semibold">{group.label}</h4><ul className="list-disc space-y-1 pl-5 text-sm">{group.items.map((item,i)=><li key={i}>{item}</li>)}</ul></div>)}
+            <h4 className="font-semibold">{t("Belegte Meldungen","Cited alerts")}</h4>
+            <div className="flex flex-wrap gap-2">{aiResult.evidence_alert_ids.map(id=><Link key={id} className="rounded border border-border px-2 py-1 font-mono text-xs text-accent hover:underline" href={`/alerts/${id}`}>{id.slice(0,12)}</Link>)}</div>
+            <p className="text-xs text-muted-foreground">{t("Grenzen der Analyse","Limitations")}: {aiResult.limitations}</p>
+            <p className="text-xs text-warning">{t("Ergebnis ist nicht gespeichert und muss durch einen Analysten überprüft werden. Kein Eingriff erfolgt.","Result is not persisted and requires analyst review. No action is taken.")}</p>
+          </section>:null}
           {run.data ? <RunPanels run={run.data} /> : null}
         </section>
         <div className="min-w-0 xl:max-h-[calc(100vh-110px)] xl:overflow-y-auto xl:pr-2">
