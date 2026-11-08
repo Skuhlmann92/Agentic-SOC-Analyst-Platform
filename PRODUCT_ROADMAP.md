@@ -132,3 +132,82 @@ Updated: 2026-11-07. Features #3–#5 were merged and deployed via PR #3. Subseq
 - Provide backend integration tests for groups, bulk atomicity, tenant isolation and user interface flows.
 
 No unreviewed automatic approvals, isolation or remediation operations are planned.
+
+
+## Enterprise- & Commercial-Readiness-Programm — Erweiterung 08.11.2026
+
+**Status:** Alle nachstehenden Punkte sind offene Entwicklungs- und Abnahmeaufgaben, keine Aussage über bereits produktiv verfügbare Funktionen. Bestehende Teilimplementierungen sind ausdrücklich berücksichtigt. Umsetzung in kleinen Pull Requests mit Migration, automatisierten Tests, Sicherheitsreview und dokumentierter Abnahme; die bestehende P0-Lokalisierung und offenen UX-Aufgaben bleiben bestehen.
+
+### SEC-01 — Mandantenfähigkeit und Rechteverwaltung (P0)
+
+- [ ] Mandantengrenzen für jede Next.js-/Neon-API, Datenbankabfrage, Wazuh-Ingestion, KI-Analyse, n8n-Workflow, Datei und Export inventarisieren; Python-Referenzstack und gehostete SaaS-Konsole getrennt prüfen.
+- [ ] Tenant-ID ausschließlich aus verifizierter Session beziehungsweise gebundenem Ingestion-Credential ableiten; nie aus frei manipulierbaren Request-Feldern vertrauen.
+- [ ] PostgreSQL Row-Level Security (RLS), Foreign Keys und tenantgebundene Service-Rollen auf sämtlichen produktiven Tabellen inklusive neuer Incident-, Report-, Script- und Audit-Tabellen durchsetzen; fail-closed bei fehlendem Kontext.
+- [ ] Rollenmodell für Tenant-Admin, Analyst, Reviewer, Read-only und Plattformbetrieb mit serverseitigen Berechtigungen, Least Privilege und Separation of Duties definieren; Benutzerverwaltung, Einladung und Entzug ergänzen.
+- [ ] Mandantenspezifische Geheimnisse, KI-Credentials, Connector-Tokens, Aufbewahrung und Löschung isolieren; Zugriffe und administrative Aktionen unveränderlich auditieren.
+- [ ] Automatisierte Negativtests: Cross-Tenant-IDOR, manipulierte Tenant-ID, API-/Export-/Suchzugriff, gleichzeitige Sessions, Rollenwechsel und n8n-Callback.
+- **Abnahme:** Keine mandantenübergreifende Lesung/Änderung auch bei direktem API-Aufruf; Rollenrechte serverseitig getestet; Audit weist den authentifizierten Akteur nach.
+- **Abhängigkeiten:** bestehendes Audit-Meilenstein #11, Commercial Hardening und GDPR.
+
+### SEC-02 — Incident-Korrelation (P1)
+
+- [ ] Bestehende 7-Tage-Gruppierung nach Host, Regel, Quelle und Stundenfenster als *Korrelationsvorschlag* erhalten; bestätigte Incidents als getrennte Entität modellieren.
+- [ ] Ereignisse über Host, Benutzer, IP, Prozessbaum, Hash, MITRE-Technik und verifizierte zeitliche Abfolge korrelieren; fehlende Felder und unzuverlässige Zeitstempel sichtbar machen.
+- [ ] Deterministische Regeln mit versionierten Kriterien, nachvollziehbarer Gruppierungsbegründung, Deduplizierung und Begrenzung von False Positives implementieren.
+- [ ] Vorschläge manuell zu Incident/Case zusammenführen oder trennen; Original-Alerts und Evidenzreferenzen unverändert erhalten.
+- [ ] Incident-Timeline mit Quellen, Zeitfenster, Kontext, Status, Besitzer und nächster Aktion ergänzen; Performance/Retention für große Eventmengen testen.
+- **Abnahme:** Reproduzierbare Korrelations- und Negativtests, keine unbelegte Kausalitätsbehauptung, kein automatisches Bestätigen eines Angriffs.
+- **Abhängigkeiten:** bestehende Gruppierung #5, Timeline #6, UX-02f/02g.
+
+### SEC-03 — KI-Analyse mit überprüfbaren Belegen (P0)
+
+- [ ] Bestehende Claude-Einzelanalyse und deterministische rules_v1-Empfehlung als getrennte Analysearten erhalten; jede relevante Behauptung an gültige, mandantenspezifische Alert-/Event-/Log-IDs und Evidenz-Snapshots binden.
+- [ ] Strukturierte Ausgabe mit Aussage, Quellenbeleg, Hypothese, Gegenindizien, Datenlücken, Modell-/Promptversion und Analysezeitpunkt definieren.
+- [ ] Referenzen serverseitig gegen gespeicherte Daten prüfen; nicht belegbare Aussagen markieren oder verwerfen, statt Quellen zu erfinden.
+- [ ] Konfidenz nur als transparenten qualitativen Evidenzgrad oder nach gemessener Kalibrierung als Wahrscheinlichkeit darstellen; keine erfundenen Prozentwerte.
+- [ ] Prompt-Injection-Abwehr für untrusted Logs, strukturierte Schema-Validierung, Datenminimierung, Provider-Timeouts, Rate Limits, Kostenlimits und sicheren rules_v1-Fallback implementieren.
+- [ ] Analysen tenantisoliert versionieren und auditieren; Tests mit falschen IDs, fremden Mandanten, fehlenden Logs, manipulierten Events und Modellfehlern ergänzen.
+- **Abnahme:** Jede sicherheitsrelevante Schlussfolgerung ist bis zur Originalquelle prüfbar; fehlende Evidenz führt nicht zu einer bestätigten Aussage.
+- **Abhängigkeiten:** Claude-Einzelanalyse, #7 Context Enrichment, #11 Audit.
+
+### SEC-04 — Sichere Remediation mit Freigabe, Signatur und Rollback (P0 vor produktiver Ausführung)
+
+- [ ] Bestehende Windows-/PowerShell- und Linux-/Bash-Skriptentwürfe weiterhin standardmäßig nur lesend und nicht ausführbar halten.
+- [ ] Versionierte, geprüfte Playbook-Registry mit Ziel-OS, Voraussetzungen, erlaubten Parametern, Risikostufe, Eigentümer und kryptografischer Signatur einführen; Signaturen vor Ausführung validieren.
+- [ ] PowerShell-/Bash-Syntax- und Sicherheitsprüfung (u. a. ShellCheck für Bash), Allowlist zulässiger Aktionen und Policy-as-Code ergänzen; Regex-Checks allein nicht als Schutz akzeptieren.
+- [ ] Dry-Run/Impact-Preview dort anbieten, wo technisch möglich; bei nicht simulierbaren Aktionen klar kennzeichnen. Rollback-Plan vor Freigabe definieren und Wiederherstellung testen, ohne generelle Reversibilität zu behaupten.
+- [ ] Zwei-Personen-Freigabe für hochriskante Eingriffe, Rollenprüfung, MFA/Step-up bei Bedarf, zeitlich begrenzte Freigabe, idempotente Ausführung und Kill Switch spezifizieren.
+- [ ] Separaten stark eingeschränkten Executor mit Hostbindung, kurzlebigen Credentials, Timeout, Ressourcenlimits und manipulationsgeschütztem Audit-Trail entwerfen; keine Ausführung durch das LLM.
+- [ ] End-to-End-Tests für manipulierte Skripte, Replay, Race Conditions, abgelaufene Freigaben, falsches OS, Ausführungsfehler und Rollback durchführen.
+- **Abnahme:** Keine produktive Änderung ohne verifizierte Berechtigung und explizite Freigabe; signierter unveränderter Playbook-Stand und Ausführungsergebnis nachvollziehbar.
+- **Abhängigkeiten:** #8 Safe Remediation, #11 Audit, UX-05e und Linux-Syntaxprüfung.
+
+### SEC-05 — Threat-Intelligence-Anbindung (P1)
+
+- [ ] MITRE ATT&CK als versionierte Wissens-/Taktik-/Technik-Zuordnung integrieren; nicht als Live-Indikatorfeed behandeln.
+- [ ] MISP als optionalen, tenantkonfigurierbaren Feed anbinden; weitere vertrauenswürdige IOC-Feeds über austauschbare Connector-Schnittstelle vorsehen.
+- [ ] Indikatoren (IP, Domain, URL, Hash, CVE) normalisieren, deduplizieren, mit Quelle, Abrufzeit, Gültigkeit, Lizenz und Vertrauenswürdigkeit versehen.
+- [ ] Enrichment mit Rate Limits, Cache, Ablaufzeiten, Datenschutzprüfung und nachvollziehbaren Trefferbelegen; ein Feed-Treffer allein bestätigt keinen Angriff.
+- [ ] Feed-Ausfall, veraltete Daten, False Positives, TLP-/Weitergabebeschränkungen und mandantenspezifische Freigaben testen.
+- **Abnahme:** Jeder Intelligence-Treffer zeigt Quelle, Zeitstempel und Match-Grund; kein ungeprüftes automatisches Blockieren.
+- **Abhängigkeiten:** #7 Context Enrichment, SEC-02, SEC-03.
+
+### SEC-06 — Kundenreporting und Monatsberichte (P1)
+
+- [ ] Mandantensichere Dashboards und exportierbare Monatsberichte mit Zeitraum, Datenabdeckung, Alert-/Incident-Trends, kritischen Assets, Maßnahmen, offenen Risiken und Bearbeitungsstatus.
+- [ ] Kennzahlen klar definieren (z. B. MTTD/MTTR nur bei belastbaren Zeitstempeln); synthetische Daten, unvollständige Quellen und fehlende Messwerte explizit kennzeichnen.
+- [ ] KI-generierte Management-Zusammenfassung ausschließlich aus verifizierten Metriken und freigegebenen Incident-Daten erzeugen; Quellen und Grenzen anzeigen.
+- [ ] PDF-/CSV-Export mit rollenbasierter Berechtigung, personenbezogener Datenminimierung, Branding, de-DE-Lokalisierung und nachvollziehbarem Erstellungsstand implementieren.
+- [ ] Optional terminierte Zustellung nur nach Opt-in, Empfängerprüfung und sicherer Übertragung; Reportversion, Ersteller und Download im Audit erfassen.
+- [ ] Tests für Cross-Tenant-Exporte, leere Zeiträume, Datenlücken, große Datenmengen, Zeitzonen und abweichende Reportzahlen ergänzen.
+- **Abnahme:** Berichtszahlen reproduzierbar aus mandantengebundenen Abfragen; keine erfundenen KI-Kennzahlen; autorisierte Exporte und geprüfte deutsche Darstellung.
+- **Abhängigkeiten:** SEC-01, SEC-02, SEC-03, DE-DE-Meilenstein.
+
+### Vorgeschlagene Umsetzungsreihenfolge und Release-Gates
+
+1. **P0 Sicherheitsfundament:** SEC-01 → SEC-03 (mit #11 Audit); vor jedem produktiven Kundenzugang.
+2. **P0 Kontrollierte Maßnahmen:** SEC-04 erst nach erfolgreichem Sicherheitsreview und isolierten Executor-Tests für schreibende Aktionen freigeben.
+3. **P1 Analystenmehrwert:** SEC-02 → SEC-05; auf vorhandener Gruppierung und Context Enrichment aufbauen.
+4. **P1 Kundenmehrwert:** SEC-06 nach belastbaren Datenmodellen, Tenant-Isolation und Report-Kennzahlen.
+
+**Übergreifende Definition of Done:** Implementierung und Datenbankmigration dokumentiert; Unit-/Integrations-/Sicherheitstests grün; Tenant- und Rollen-Negativtests bestanden; Logging/Audit vorhanden; UI de-DE/EN geprüft; Preview und Deployment verifiziert. Checkboxen erst nach tatsächlicher Prüfung abhaken.
