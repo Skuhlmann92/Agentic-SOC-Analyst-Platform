@@ -26,7 +26,8 @@ function safetyFlags(code:string,targetOS:"windows"|"linux"){
  [/\b(?:Set-MpPreference|Add-MpPreference|Stop-Service\s+(?:WinDefend|Sense)|Set-ExecutionPolicy)\b/i,"Security controls"],
  [/\b(?:Set-NetFirewallProfile|Disable-NetFirewallRule|New-NetFirewallRule)\b/i,"Firewall changes"],
  [/\b(?:Register-ScheduledTask|New-Service|schtasks|sc\.exe\s+create)\b/i,"Persistence or services"]];
- if(targetOS==="linux")return [
+ if(targetOS==="linux"){
+ const linuxRules:[RegExp,string][]=[
  [/\b(?:rm|shred|wipefs|mkfs|dd|fdisk|parted)\b/i,"Destructive file/disk command"],
  [/\b(?:curl|wget|nc|ncat|socat|ssh|scp|rsync)\b/i,"Network or remote access"],
  [/\b(?:sudo|su|chmod|chown|useradd|usermod|passwd)\b/i,"Permission change"],
@@ -35,7 +36,9 @@ function safetyFlags(code:string,targetOS:"windows"|"linux"){
  [/\b(?:apt(?:-get)?\s+(?:install|remove|purge|upgrade)|dnf\s+(?:install|remove|upgrade)|yum\s+(?:install|remove))\b/i,"Package change"],
  [/\b(?:eval|base64\s+-d|bash\s+-c|sh\s+-c|crontab)\b/i,"Dynamic or scheduled execution"],
  [/\b(?:tee|sed\s+-i|truncate)\b/i,"File modification"]
- ].filter(([re])=>re.test(code)).map(([,label])=>label);
+ ];
+ return linuxRules.filter(([re])=>re.test(code)).map(([,label])=>label);
+ }
  return rules.filter(([re])=>re.test(code)).map(([,label])=>label);
 }
 export async function GET(){
