@@ -1,3 +1,4 @@
+import {consumeAdminTotp} from "@/lib/admin-totp";
 import {checkLoginThrottle} from "@/lib/auth-throttle";
 import { timingSafeEqual } from "node:crypto";
 import { LIVE_TENANT } from "@/lib/live-api";
@@ -7,9 +8,9 @@ import { findOperator, isUuid } from "@/lib/operators";
 import { sealSession, SESSION_COOKIE } from "@/lib/session-token";
 
 export async function POST(request: Request) {
-  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };
   try {
-    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };
   } catch {
     return NextResponse.json(
       { error: { code: "validation_error", message: "The request body is not valid JSON." } },
@@ -45,8 +46,11 @@ export async function POST(request: Request) {
     return a.length === b.length && timingSafeEqual(a,b);
   };
   if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
+    if (!await consumeAdminTotp(typeof body.totp === "string" ? body.totp : "")) {
+      return NextResponse.json({error:{code:"unauthenticated",message:"Anmeldung fehlgeschlagen. Passwort und Bestätigungscode prüfen."}},{status:401,headers:{"Cache-Control":"no-store"}});
+    }
     const token = await sealSession({
-      sub: adminName, role: "admin", name: "SOC Administrator",
+      mfa: true, sub: adminName, role: "admin", name: "SOC Administrator",
       tenantId: LIVE_TENANT, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
     });
     const response = NextResponse.json({name:"SOC Administrator",role:"admin",tenantId:LIVE_TENANT});

@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const operator = "admin";
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
 
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -39,7 +40,7 @@ export default function LoginPage() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ operator, password }),
+      body: JSON.stringify({ operator, password, totp }),
     });
     setPending(false);
     if (!response.ok) {
@@ -71,6 +72,10 @@ export default function LoginPage() {
         <label className="mb-3 block text-sm">
           <span className="mb-1 block text-muted-foreground">Password</span>
           <input className="field" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+        </label>
+        <label className="mb-3 block text-sm">
+          <span className="mb-1 block text-muted-foreground">Authenticator-Code</span>
+          <input className="field" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={totp} onChange={(event) => setTotp(event.target.value)} />
         </label>
         {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
         <Button className="w-full" disabled={pending} type="submit">

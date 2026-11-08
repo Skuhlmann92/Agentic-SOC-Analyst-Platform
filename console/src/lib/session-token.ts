@@ -3,6 +3,7 @@ export const SESSION_COOKIE = "soc_session";
 export type Role = "analyst" | "reviewer" | "admin";
 
 export type SessionClaims = {
+  mfa?: boolean;
   sub: string;
   role: Role;
   name: string;
@@ -62,6 +63,7 @@ export async function openSession(token: string | undefined, secret = sessionSec
   if (!same(signature, await hmac(secret, payload))) return null;
   try {
     const claims = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload))) as SessionClaims;
+    if (process.env.NODE_ENV === "production" && claims.role === "admin" && claims.mfa !== true) return null;
     if (!claims.exp || claims.exp < Date.now() / 1000) return null;
     if (claims.role !== "analyst" && claims.role !== "reviewer" && claims.role !== "admin") return null;
     if (!claims.tenantId || !claims.name || !claims.sub) return null;
