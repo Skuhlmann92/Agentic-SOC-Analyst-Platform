@@ -8,6 +8,12 @@ import { findOperator, isUuid } from "@/lib/operators";
 import { sealSession, SESSION_COOKIE } from "@/lib/session-token";
 
 export async function POST(request: Request) {
+  // Login also changes a browser's authentication state; reject login CSRF.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return NextResponse.json({error:{code:"invalid_origin",message:"Cross-origin login denied."}},
+      {status:403,headers:{"Cache-Control":"no-store"}});
+  }
   let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };
   try {
     body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };

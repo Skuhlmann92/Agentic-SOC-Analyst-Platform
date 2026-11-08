@@ -10,8 +10,10 @@ import {sessionSecret} from "@/lib/session-token";
 export async function checkLoginThrottle(request:Request,operator:string){
  const database=process.env.POSTGRES_DATABASE_URL||process.env.POSTGRES_URL;
  if(!database)return {allowed:false,retrySeconds:60};
- const address=(request.headers.get("x-vercel-forwarded-for")||
-   request.headers.get("x-forwarded-for")||"unknown").split(",")[0].trim().slice(0,80);
+ // Do not trust the generic X-Forwarded-For header supplied by clients.
+ // If the platform header is unavailable, use one shared bucket instead.
+ const address=(request.headers.get("x-vercel-forwarded-for")||"unknown")
+   .split(",")[0].trim().slice(0,80);
  const key=createHmac("sha256",sessionSecret()).update(address+"|"+operator.slice(0,80)).digest("hex");
  try{
   const sql=neon(database);
