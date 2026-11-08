@@ -111,6 +111,17 @@ Updated: 2026-11-07. Features #3–#5 were merged and deployed via PR #3. Subseq
 - [ ] Manuelle Mobilprüfung: sinnvolle Stapelung und bedienbare Buttons.
 - [ ] Dokumentierte Screenshots Vorher/Nachher. Vorher-Bilder wurden vom Projektinhaber bereitgestellt; Nachher-Bilder stehen noch aus.
 
+## Umsetzung November 2026 — Claude-Einzelanalyse & Linux-Skripte
+
+- [x] **KI-Analyse einzelner Alerts:** Neuer, authentifizierter POST-Endpunkt `/api/alert-ai`. Nutzt den ausgewählten Alert und höchstens 24 weitere Alerts desselben Hosts aus ±24 Stunden, mit begrenzten Feldern. Die Claude-Antwort enthält Zusammenfassung, Bewertung, Hypothesen, harmlose Ursachen, lesende Prüfschritte, Grenzen und ausschließlich validierte Beleg-Alert-IDs.
+- [x] **UI im KI-Agentenbereich:** Separater Button **„Alert mit Claude analysieren“** neben dem vorhandenen regelbasierten Untersuchungs-Workflow. Ergebnisse werden deutlich als unbestätigte, **nicht dauerhaft gespeicherte** Analyse angezeigt. Kein Remote-Eingriff oder automatisches Schließen von Alerts.
+- [x] **Linux-/Bash-Unterstützung:** Explizite Zielsystem-Auswahl für **Windows/PowerShell** oder **Linux/Bash**, bei Einzel- und Sammeldiagnosen. Bestehende PowerShell-Entwürfe bleiben anzeigbar; neue Entwürfe erhalten Skriptsprache und Zielsystem als Metadaten.
+- [x] **Basisschutz:** Nur lesende Diagnose angefordert, Risiko-Muster für Linux-Shell-Befehle, kein SSH und keine automatische Skriptausführung. Alle neuen Skripte müssen manuell sicherheitsgeprüft werden. Betriebssystemkonflikte werden abgefangen, soweit die Alerts Betriebssystem-Metadaten liefern.
+- [ ] **Echte Linux-Syntaxprüfung:** ShellCheck und AST-/Befehlsanalyse vor jeglicher Ausführungsplanung; Regex-Indikatoren sind kein Sicherheitsnachweis.
+- [ ] **KI-Analyse dauerhaft versionieren:** Mandantensichere Speicherung, eindeutige Zuordnung zu Alert/Analyst, nachvollziehbare Evidenz-Snapshots, Modellversion, Aufbewahrungsfristen und append-only Audit.
+- [ ] **End-to-End-Tests mit Echtdaten und Fehlerfällen:** Linux- und Windows-Host prüfen, hohe Regel-Level, fremder Mandant, fehlende Claude-Credentials, Rate Limit, Timeout, manipulierte Alert-Inhalte, ungültige Referenzen und ausbleibende Skriptausführung.
+- [ ] **OS-Erkennung aus verifiziertem Inventar:** Aktuelle Auswahl wird vom Analysten vorgenommen. Verlässliche automatische Plattformzuordnung über Host-Inventar/Heartbeat ist noch zu integrieren.
+
 ## Commercial hardening required before B2B production
 
 - Replace generic `SOC Administrator` decision attribution with actual authenticated actor, enforced permissions and separation-of-duties.
