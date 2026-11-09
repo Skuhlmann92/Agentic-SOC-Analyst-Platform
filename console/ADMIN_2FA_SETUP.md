@@ -10,3 +10,17 @@ Before deploying:
 4. Apply the migration and configure the environment variable in production before deploying. The login fails closed when the secret, database, permission or migration is missing. Existing administrator sessions are invalidated, so have a recovery path for access to Vercel and the database before deploying.
 
 Recovery requires a trusted administrator to provision a new random secret through Vercel and enroll a new authenticator, followed by a deployment if needed for environment changes. Preserve access to the Vercel account and database. This first implementation does not provide backup codes, per-user enrollment, passkeys, or self-service recovery.
+
+
+## Automated regression checks (2026-11-09)
+
+Run `npm ci --no-audit --no-fund` and
+`node --experimental-strip-types --test tests/*.test.mjs` from `console/`
+using Node.js 22.15 or newer (the route tests use `module.registerHooks`).
+The login tests execute the actual route, TOTP, throttle and session code with
+an in-memory database transport and a fixed live-tenant export. They cover
+malformed input, cross-origin requests, success/cookie claims, failure-message
+parity, replay, missing secrets, throttling, storage failure, demo isolation,
+old sessions and disabled production sample accounts. The simulated replay
+transport is not a PostgreSQL concurrency or privilege test. The staging and
+recovery checks above remain mandatory before rollout.

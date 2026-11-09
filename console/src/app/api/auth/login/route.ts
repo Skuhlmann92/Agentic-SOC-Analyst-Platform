@@ -14,15 +14,28 @@ export async function POST(request: Request) {
     return NextResponse.json({error:{code:"invalid_origin",message:"Cross-origin login denied."}},
       {status:403,headers:{"Cache-Control":"no-store"}});
   }
-  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };
+  let input: unknown;
   try {
-    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string };
+    input = await request.json();
   } catch {
     return NextResponse.json(
       { error: { code: "validation_error", message: "The request body is not valid JSON." } },
       { status: 422 },
     );
   }
+  // JSON assertions do not validate runtime input. Reject wrong field types before
+  // property access, Buffer conversion, string operations or authentication work.
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return invalidInput();
+  }
+  const fields = input as Record<string, unknown>;
+  const limits = {operator: 128, password: 4096, tenantId: 64, totp: 64};
+  for (const [key, limit] of Object.entries(limits)) {
+    if (fields[key] !== undefined &&
+        (typeof fields[key] !== "string" || fields[key].length > limit)) return invalidInput();
+  }
+  if (fields.demo !== undefined && typeof fields.demo !== "boolean") return invalidInput();
+  const body = fields as {operator?: string; password?: string; tenantId?: string; demo?: boolean; totp?: string};
   if (body.demo === true) {
     const tenantId = "11111111-1111-4111-8111-111111111111";
     const token = await sealSession({
@@ -53,7 +66,7 @@ export async function POST(request: Request) {
   };
   if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
     if (!await consumeAdminTotp(typeof body.totp === "string" ? body.totp : "")) {
-      return NextResponse.json({error:{code:"unauthenticated",message:"Anmeldung fehlgeschlagen. Passwort und Bestätigungscode prüfen."}},{status:401,headers:{"Cache-Control":"no-store"}});
+      return failedAdminLogin();
     }
     const token = await sealSession({
       mfa: true, sub: adminName, role: "admin", name: "SOC Administrator",
@@ -65,6 +78,8 @@ export async function POST(request: Request) {
     });
     return response;
   }
+  // Do not disclose whether the password or the second factor was incorrect.
+  if (body.operator === "admin" && (process.env.NODE_ENV === "production" || adminPassword)) return failedAdminLogin();
   // Local sample accounts have known credentials: never permit them in production.
   if (process.env.NODE_ENV === "production" || process.env.ENABLE_LOCAL_OPERATORS !== "true") {
     return NextResponse.json(
@@ -95,4 +110,14 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 12,
   });
   return response;
+}
+
+function invalidInput() {
+  return NextResponse.json({error:{code:"validation_error",message:"Ungültige Anmeldedaten."}},
+    {status:422,headers:{"Cache-Control":"no-store"}});
+}
+
+function failedAdminLogin() {
+  return NextResponse.json({error:{code:"unauthenticated",message:"Anmeldung fehlgeschlagen. Passwort und Bestätigungscode prüfen."}},
+    {status:401,headers:{"Cache-Control":"no-store"}});
 }

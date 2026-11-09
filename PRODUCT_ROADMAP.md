@@ -211,3 +211,17 @@ No unreviewed automatic approvals, isolation or remediation operations are plann
 4. **P1 Kundenmehrwert:** SEC-06 nach belastbaren Datenmodellen, Tenant-Isolation und Report-Kennzahlen.
 
 **Übergreifende Definition of Done:** Implementierung und Datenbankmigration dokumentiert; Unit-/Integrations-/Sicherheitstests grün; Tenant- und Rollen-Negativtests bestanden; Logging/Audit vorhanden; UI de-DE/EN geprüft; Preview und Deployment verifiziert. Checkboxen erst nach tatsächlicher Prüfung abhaken.
+
+
+## SEC-01 Teilfortschritt — Admin-Anmeldung und 2FA-Abnahme (09.11.2026)
+
+**Status: Entwicklungszweig `security/admin-2fa`, PR #8; noch nicht produktiv freigegeben.**
+
+- [x] Laufzeitvalidierung der Login-Eingaben: ungültige JSON-Werte, falsche Feldtypen und überlange Felder werden vor Authentifizierung und Datenbankzugriff zurückgewiesen.
+- [x] Einheitliche Admin-Fehlermeldung für falsches Passwort und falschen zweiten Faktor; kein Session-Cookie bei Ablehnung.
+- [x] Elf zusätzliche automatisierte Tests des tatsächlichen Login-Handlers: erfolgreiche MFA-Session, Cookie-Schutz, feste Mandantenbindung, Demo-Isolation, Origin-Prüfung, Rate Limit, Datenbankfehler, veraltete/manipulierte Sessions sowie ungültige und wiederverwendete Codes.
+- [x] Reproduzierbare Installation mit `npm ci` im Sicherheitsworkflow wiederhergestellt.
+- **Testgrenze:** Datenbanktransport in den neuen Route-Tests simuliert; sie ersetzen keine Prüfung realer Datenbankrechte, PostgreSQL-Nebenläufigkeit oder Browser-Anmeldung in einer isolierten Vorschau.
+- [ ] Isolierte Preview mit echter Datenbank, Migration 008, eingeschränkten DB-Rechten und vollständigem Browser-Login abnehmen.
+- [ ] Authenticator sicher einrichten und Wiederherstellungsweg prüfen; danach produktive Migration und Veröffentlichung.
+- [ ] Verbleibende Paket-Sicherheitsmeldungen bewerten und beheben; vollständigen Anwendungsscan abschließen.
