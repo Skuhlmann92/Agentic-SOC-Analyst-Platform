@@ -20,10 +20,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: console/package-lock.json
-      # Existing package-lock predates the Neon client dependency. Resolve it in CI
-      # until a regenerated, committed lockfile restores strict npm ci.
-      - name: Install dependencies (legacy lockfile reconciliation)
-        run: npm install --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
         working-directory: console
       - name: Tenant isolation and RBAC tests
         run: node --experimental-strip-types --test tests/*.test.mjs
