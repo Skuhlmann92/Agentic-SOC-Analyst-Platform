@@ -51,7 +51,7 @@ test('valid credentials issue protected tenant-bound MFA session',async()=>{
 });
 test('wrong password and wrong second factor return identical failures',async()=>{
  const a=await login({...admin(),password:'wrong'});await denied(a,401);assert.equal(calls.length,1);
- const b=await login({...admin(),totpCode:'invalid'});await denied(b,401);assert.deepEqual(await a.json(),await b.json());
+ const b=await login({...admin(),totpCode:codeAt(Math.floor(Date.now()/30000)-5)});await denied(b,401);assert.deepEqual(await a.json(),await b.json());
 });
 test('concurrent reuse rejected with simulated atomic database transport',async()=>{
  const body=admin(),rs=await Promise.all([login(body),login(body),login(body)]);
