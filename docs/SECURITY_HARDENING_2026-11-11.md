@@ -6,6 +6,13 @@ Branch: `roadmap/security-hardening-20261111`. This is an implementation branch,
 - [x] Added `console/tests/auth-security-regression.test.mjs` with static regression guards for production sample-account exclusion, server-side admin password configuration, timing-safe comparison, throttling and cookie flags.
 - [ ] Run CI and validate tests on this branch. No green build or deployment is claimed.
 
+## Fortschritt 11.11.2026 (Draft PR #9)
+- [x] Im Branch: RFC-6238-Admin-TOTP mit 6-stelligen Codes, serverseitiger Prüfung und atomarer PostgreSQL-Replay-Sperre.
+- [x] `mfaVerifiedAt` in Administrator-Sessions sowie Login-Eingabefeld und Tests; CI #164 erfolgreich.
+- [x] Neon-Staging: Migration 008 (Tabelle) und Migration 009 (NOLOGIN-Rollenkandidat) angewendet; SQL-Counter-Test und PostgreSQL-ACL-Prüfung erfolgreich.
+- [ ] Noch offen: Test unter echten eingeschränkten LOGIN-Credentials, sichere Provisionierung eines TOTP-Secrets im Preview, authentifizierter E2E-Test, Recovery und produktiver Release.
+- [ ] Per-User-MFA mit Reset/Audit/Recovery-Codes bleibt unimplementiert.
+
 ## P0 — Authentication
 - [ ] Replace shared administrator password with per-user identities, salted password hashing (Argon2id), user lifecycle and recovery.
 - [ ] Add server-side TOTP enrollment with verified challenge, encrypted TOTP secrets, one-time recovery codes stored as hashes, replay protection, rate limiting, audit and forced MFA for administrators.
