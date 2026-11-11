@@ -2,6 +2,24 @@
 
 Updated: 2026-11-07. Features #3–#5 were merged and deployed via PR #3. Subsequent UX and localization work is tracked below.
 
+## SOC Academy & Guided Investigation — erste Umsetzung im Feature-Branch (noch nicht deployed)
+
+**Ziel:** Bestehende Alert-Details als Lern- und Untersuchungsoberfläche für SOC-Einsteiger nutzbar machen, ohne produktive Entscheidungswege zu automatisieren oder zu verändern.
+
+- [x] **LEARN-01 – Alert-Lernmodus:** Geführter Ablauf mit sechs Schritten von der initialen Sichtung bis zur dokumentierbaren Einschätzung; Anfänger-, Fortgeschrittenen- und Expertenansicht.
+- [x] **LEARN-02 – Kontextbezogenes Glossar:** Begriffe für belegte Alert-/Event-Felder mit ausdrücklicher Trennung zwischen Regelmetadaten und Angriffsnachweisen.
+- [x] **LEARN-03 – Grundlagencheck:** Einfache Wissensfrage zur Trennung von Detektionsschweregrad und belegter Kompromittierung.
+- [x] **LEARN-04 – SOC Academy Einstieg:** Eigenständige Route mit fünf Lernmodulen, Praxisaufgaben und Links zu bestehenden Untersuchungsansichten.
+- [x] **LEARN-05 – Keine autonomen Maßnahmen:** Lerninteraktionen sind rein lesend, Lernfortschritt liegt lediglich im React-Zustand der aktuellen Ansicht. Keine weiteren APIs, keine Speicherung sensibler Rohdaten, keine Veränderung von Alertstatus oder Freigaben.
+- [ ] **LEARN-06 – Persistenter Fortschritt:** Authentifizierte, tenant- und benutzerspezifische Tabellen, Zugriffskontrolle, transparente Löschung, Datenminimierung und Retention; Übungen über Sessions hinweg fortsetzen.
+- [ ] **LEARN-07 – Evidenzgesteuerte Abfragen:** Echte Host-/Benutzer-/Zeitkorrelation aus autorisierten Datenquellen, konkrete Loglinks, Ergebnistypen und Kennzeichnung fehlender Daten.
+- [ ] **LEARN-08 – SOC-Mentor:** Opt-in-KI mit eindeutig zitierbaren Event-/Alert-Referenzen; Fragen vor Lösung, keine ungestützten Aussagen, Prompt-Injection-Schutz, Mandantenkontrolle, Nutzungsgrenzen.
+- [ ] **LEARN-09 – Isolierte Trainingsfälle:** Reproduzierbare synthetische Linux-/Windows-Fälle mit Lösungen und sicherer Datentrennung; keine Vermischung mit produktiven Incidents.
+- [ ] **LEARN-10 – Kompetenzmessung:** Qualitätsbewertung nachvollziehbarer Analyseentscheidungen, ohne aus der Anzahl erledigter Alerts Leistungsbehauptungen abzuleiten.
+- [ ] **LEARN-11 – Qualitätsabnahme:** TypeScript-Build, E2E-Tests für Anfänger-/Expertenansicht, Accessibility, Locale, Mobile, Demo-/Live-Tenant, Schutz vor Datenabfluss sowie reale Alert-Feldvarianten.
+
+**Sicherheitsabgrenzung:** Erklärung, Übungsabschluss oder KI-Antwort sind weder Incident-Urteil noch Berechtigung zur Remediation. Auch die „Experten“-Ansicht schaltet keine automatisierten Hostmaßnahmen frei.
+
 ## Implemented in production (merged into main)
 
 - **#3 Evidence-based review recommendation**: Every pending draft in the review queue carries a deterministic recommendation (`rules_v1`) with cited stored evidence and an explanation. **Not yet an LLM verdict**: confidence percentages or "false positive" conclusions are intentionally not invented. Human approval is mandatory.
