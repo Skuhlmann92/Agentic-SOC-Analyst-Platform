@@ -1,5 +1,13 @@
 # Commercial Readiness — P0/P1/P2
 
+## Sicherheits-Fortsetzung 11.11.2026 — Draft-PR #9
+
+- [x] Im Branch `roadmap/security-hardening-20261111`: TOTP-Verifikation für Administratorzugänge, Datenbank-Replay-Schutz, signierter MFA-Nachweis in Sessions und Eingabe im Login. Technische Anleitung: `docs/ADMIN_TOTP_ROLLOUT.md`.
+- [x] Unit- und statische Sicherheitsregressionstests ergänzt; GitHub Actions Run #157 (Tests + Produktionsbuild) erfolgreich.
+- [ ] Migration `008_admin_totp_replay.sql` in Staging ausführen, dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen.
+- [ ] Vollständige MFA-Recovery, per-User-Enrollment, Reset-Audit und browserbasierte E2E-Abnahme. Kein Kunden-Onboarding vor Freigabe.
+- [ ] Erst nach Freigabe in `main` mergen und separat auf Vercel veröffentlichen; Produktionsumgebung bisher unverändert.
+
 Aktuelle technische Bestandsaufnahme und Prüfergebnisse: [COMMERCIAL_READINESS_AUDIT.md](./COMMERCIAL_READINESS_AUDIT.md).
 
 ## Release-Stand 06.11.2026
