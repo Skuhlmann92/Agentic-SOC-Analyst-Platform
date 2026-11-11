@@ -1,21 +1,56 @@
 import {checkLoginThrottle} from "@/lib/auth-throttle";
+import {verifyAndConsumeAdminTotp} from "@/lib/admin-mfa";
 import { timingSafeEqual } from "node:crypto";
 import { LIVE_TENANT } from "@/lib/live-api";
 import { NextResponse } from "next/server";
 
 import { findOperator, isUuid } from "@/lib/operators";
-import { sealSession, SESSION_COOKIE } from "@/lib/session-token";
+import { adminMfaRequired, sealSession, SESSION_COOKIE } from "@/lib/session-token";
+
+function failedAdminLogin() {
+  return NextResponse.json(
+    { error: { code: "unauthenticated", message: "Anmeldung fehlgeschlagen. Passwort und Einmalcode prüfen." } },
+    { status: 401, headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 export async function POST(request: Request) {
-  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+  // Defense-in-depth: login is a browser state mutation; also guard the route itself.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return NextResponse.json(
+      { error: { code: "invalid_origin", message: "Cross-origin login denied." } },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  let raw: unknown;
   try {
-    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+    raw = await request.json();
   } catch {
     return NextResponse.json(
       { error: { code: "validation_error", message: "The request body is not valid JSON." } },
       { status: 422 },
     );
   }
+  // Validate untrusted runtime JSON before reading fields or converting to Buffer.
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return NextResponse.json({ error: { code: "validation_error", message: "Invalid sign-in request." } }, { status: 422 });
+  }
+  const fields = raw as Record<string, unknown>;
+  const limits: Record<string, number> = { operator: 128, password: 4096, tenantId: 64, totpCode: 6 };
+  for (const [key, maxLength] of Object.entries(limits)) {
+    if (fields[key] !== undefined &&
+        (typeof fields[key] !== "string" || fields[key].length > maxLength)) {
+      return NextResponse.json(
+        { error: { code: "validation_error", message: "Invalid sign-in request." } },
+        { status: 422 },
+      );
+    }
+  }
+  if (fields.demo !== undefined && typeof fields.demo !== "boolean") {
+    return NextResponse.json({ error: { code: "validation_error", message: "Invalid sign-in request." } }, { status: 422 });
+  }
+  const body = fields as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
   if (body.demo === true) {
     const tenantId = "11111111-1111-4111-8111-111111111111";
     const token = await sealSession({
@@ -45,15 +80,23 @@ export async function POST(request: Request) {
     return a.length === b.length && timingSafeEqual(a,b);
   };
   if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
+    const requireMfa = adminMfaRequired();
+    if (requireMfa && !(await verifyAndConsumeAdminTotp(body.totpCode, adminName))) {
+      return failedAdminLogin();
+    }
     const token = await sealSession({
       sub: adminName, role: "admin", name: "SOC Administrator",
       tenantId: LIVE_TENANT, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
+      ...(requireMfa ? { mfaVerifiedAt: Math.floor(Date.now() / 1000) } : {}),
     });
     const response = NextResponse.json({name:"SOC Administrator",role:"admin",tenantId:LIVE_TENANT});
     response.cookies.set(SESSION_COOKIE,token,{
       httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:60*60*8,
     });
     return response;
+  }
+  if (body.operator === "admin" && (process.env.NODE_ENV === "production" || Boolean(adminPassword))) {
+    return failedAdminLogin();
   }
   // Local sample accounts have known credentials: never permit them in production.
   if (process.env.NODE_ENV === "production" || process.env.ENABLE_LOCAL_OPERATORS !== "true") {

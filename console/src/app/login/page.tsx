@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const operator = "admin";
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
 
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -39,7 +40,7 @@ export default function LoginPage() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ operator, password }),
+      body: JSON.stringify({ operator, password, totpCode }),
     });
     setPending(false);
     if (!response.ok) {
@@ -47,6 +48,7 @@ export default function LoginPage() {
       setError(body.error?.message || "Sign-in failed.");
       return;
     }
+    setTotpCode("");
     router.replace("/dashboard");
     router.refresh();
   }
@@ -72,12 +74,27 @@ export default function LoginPage() {
           <span className="mb-1 block text-muted-foreground">Password</span>
           <input className="field" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </label>
-        {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
+        <label className="mb-3 block text-sm">
+          <span className="mb-1 block text-muted-foreground">Authenticator-Code (bei aktivierter 2FA)</span>
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            value={totpCode}
+            onChange={(event) => setTotpCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+            placeholder="6-stelliger Einmalcode"
+            aria-label="6-stelliger Authenticator-Code"
+          />
+        </label>
+        {error ? <p className="mb-3 text-sm text-danger" role="alert">{error}</p> : null}
         <Button className="w-full" disabled={pending} type="submit">
           {pending ? "Signing in" : "Enter console"}
         </Button>
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          Enter the private SOC administrator password configured in Vercel. No tenant ID is needed. The public demo remains read-only.
+          Administratorpasswort eingeben. Falls Zwei-Faktor-Authentifizierung aktiviert ist, zusätzlich den aktuellen sechsstelligen Authenticator-Code verwenden. Die öffentliche Demo bleibt davon getrennt.
         </p>
       </form>
     </main>

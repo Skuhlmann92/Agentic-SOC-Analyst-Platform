@@ -8,7 +8,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname === "/api/endpoint-heartbeat" && request.method === "POST") return NextResponse.next();
   if (pathname === "/api/endpoint-inventory" && request.method === "POST") return NextResponse.next();
-  if (pathname === "/api/auth/login" || pathname === "/api/ingest" || pathname === "/api/health/database") return NextResponse.next();
+  // Login is a browser mutation too: apply the origin guard before bypassing auth.
+  // Ingest and public health probes remain unauthenticated but are not exempt
+  // from the browser-origin policy when an Origin header is supplied.
   // Cookies are SameSite=Lax; additionally reject cross-origin browser writes.
   // Machine-to-machine ingestion uses independent bearer tokens and no cookies.
   if(pathname.startsWith("/api/")&& !["GET","HEAD","OPTIONS"].includes(request.method)){
@@ -20,6 +22,7 @@ export async function middleware(request: NextRequest) {
       );
     }
   }
+  if (pathname === "/api/auth/login" || pathname === "/api/ingest" || pathname === "/api/health/database") return NextResponse.next();
   const session = await openSession(request.cookies.get(SESSION_COOKIE)?.value);
   if (pathname === "/login") {
     if (session) return NextResponse.redirect(new URL("/dashboard", request.url));
