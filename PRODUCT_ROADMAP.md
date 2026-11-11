@@ -1,5 +1,12 @@
 # Agentic SOC Analyst Platform — Product & UX Roadmap
 
+## Security iteration 11.11.2026 — Administrator-2FA (Draft PR #9)
+
+- [x] **Im Entwicklungsbranch:** RFC-6238-TOTP (6 Stellen / 30 s, +/- 1 Fenster) serverseitig nach Passwortabgleich; atomare Anti-Replay-Sperre in PostgreSQL; `mfaVerifiedAt` zur Entwertung alter Admin-Sessions; Authenticator-Code-Feld im Login.
+- [x] **Im Entwicklungsbranch:** Migration `008_admin_totp_replay.sql`, TOTP-Unit-Tests, Session- und Login-Regressionstests sowie Dokumentation `docs/ADMIN_TOTP_ROLLOUT.md` erstellt. CI-Prüflauf #157 erfolgreich. **Kein produktives MFA-Deployment.**
+- [ ] **Release-Gate:** Migration auf Staging, separate Auth-DB-Rolle, TOTP-Secret im Preview, echte Login- und Replay-End-to-End-Tests, Wiederherstellungsablauf und Rollback.
+- [ ] **Weiterer Ausbau:** Benutzerbezogene MFA-Einrichtung, Recovery-Codes, verschlüsselte Schlüsselablage, sichere Resets und verpflichtende MFA für alle privilegierten B2B-Identitäten.
+
 Updated: 2026-11-07. Features #3–#5 were merged and deployed via PR #3. Subsequent UX and localization work is tracked below.
 
 ## Implemented in production (merged into main)
