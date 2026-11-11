@@ -8,7 +8,14 @@ export type SessionClaims = {
   name: string;
   tenantId: string;
   exp: number;
+  // Present only after successful password + server-side TOTP verification.
+  mfaVerifiedAt?: number;
 };
+
+// Configuring a TOTP secret itself activates enforcement, even if the flag is omitted.
+export function adminMfaRequired() {
+  return process.env.SOC_REQUIRE_ADMIN_MFA === "true" || Boolean(process.env.SOC_ADMIN_TOTP_SECRET?.trim());
+}
 
 export function sessionSecret() {
   const configured=process.env.CONSOLE_SESSION_SECRET;
@@ -65,6 +72,12 @@ export async function openSession(token: string | undefined, secret = sessionSec
     if (!claims.exp || claims.exp < Date.now() / 1000) return null;
     if (claims.role !== "analyst" && claims.role !== "reviewer" && claims.role !== "admin") return null;
     if (!claims.tenantId || !claims.name || !claims.sub) return null;
+    // Invalidates pre-MFA administrator sessions as soon as MFA is enabled.
+    if (claims.role === "admin" && adminMfaRequired()) {
+      const now = Math.floor(Date.now() / 1000);
+      if (typeof claims.mfaVerifiedAt !== "number" || !Number.isSafeInteger(claims.mfaVerifiedAt)) return null;
+      if (claims.mfaVerifiedAt > now + 30 || claims.mfaVerifiedAt < now - 8 * 60 * 60) return null;
+    }
     return claims;
   } catch {
     return null;
