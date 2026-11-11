@@ -1,20 +1,24 @@
 import {checkLoginThrottle} from "@/lib/auth-throttle";
+import {verifyAndConsumeAdminTotp} from "@/lib/admin-mfa";
 import { timingSafeEqual } from "node:crypto";
 import { LIVE_TENANT } from "@/lib/live-api";
 import { NextResponse } from "next/server";
 
 import { findOperator, isUuid } from "@/lib/operators";
-import { sealSession, SESSION_COOKIE } from "@/lib/session-token";
+import { adminMfaRequired, sealSession, SESSION_COOKIE } from "@/lib/session-token";
 
 export async function POST(request: Request) {
-  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
   try {
-    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean };
+    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
   } catch {
     return NextResponse.json(
       { error: { code: "validation_error", message: "The request body is not valid JSON." } },
       { status: 422 },
     );
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: { code: "validation_error", message: "Invalid sign-in request." } }, { status: 422 });
   }
   if (body.demo === true) {
     const tenantId = "11111111-1111-4111-8111-111111111111";
@@ -45,9 +49,17 @@ export async function POST(request: Request) {
     return a.length === b.length && timingSafeEqual(a,b);
   };
   if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
+    const requireMfa = adminMfaRequired();
+    if (requireMfa && !(await verifyAndConsumeAdminTotp(body.totpCode, adminName))) {
+      return NextResponse.json(
+        { error: { code: "unauthenticated", message: "Anmeldung fehlgeschlagen. Passwort und Einmalcode prüfen." } },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     const token = await sealSession({
       sub: adminName, role: "admin", name: "SOC Administrator",
       tenantId: LIVE_TENANT, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
+      ...(requireMfa ? { mfaVerifiedAt: Math.floor(Date.now() / 1000) } : {}),
     });
     const response = NextResponse.json({name:"SOC Administrator",role:"admin",tenantId:LIVE_TENANT});
     response.cookies.set(SESSION_COOKIE,token,{
