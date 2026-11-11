@@ -25,6 +25,12 @@
 
 Die additive Migration 008 wurde auf dem vorhandenen Neon-Staging-Branch `security-2fa-validation` angewendet. Prüfung: Tabelle vorhanden, alle drei Spalten mit erwarteten Typen und NOT-NULL vorhanden. Ein transaktionaler Smoke-Test auf einer temporären Tabelle bestätigte: erster Zeitschritt akzeptiert, identischer Zeitschritt abgewiesen (0 Zeilen), höherer Zeitschritt akzeptiert. **Kein Test mit echtem Authenticator-Secret, keiner produktiven Datenbank und keinem authentifizierten Preview-Login.** Die temporäre Testtabelle wurde beim Commit automatisch entfernt.
 
+## Zusätzliche Least-Privilege-Staging-Prüfung (11.11.2026)
+
+Migration `009_auth_replay_least_privilege_candidate.sql` ist auf `security-2fa-validation` angewendet. Die erzeugte Rolle `soc_auth_replay_candidate` besitzt **NOLOGIN** und **NOBYPASSRLS**. PostgreSQL bestätigt die benötigten spaltenbezogenen SELECT-, INSERT- und UPDATE-Rechte; DELETE auf der Replay-Tabelle und SELECT auf `soc_ingest_credentials` sind verweigert. Der Test einer INSERT-Anfrage mit `SET ROLE` konnte nicht ausgeführt werden, weil der ausführende Owner nicht Mitglied der Kandidatenrolle ist. Die fehlgeschlagene Testtransaktion wurde zurückgerollt.
+
+**Offen:** Eine echte dedizierte LOGIN-Rolle muss separat provisioniert und mit dieser NOLOGIN-Rolle verbunden werden; danach vollständiger Auth-API- und SQL-Replay-Test unter ihren tatsächlichen Credentials. Die Rolle ist derzeit nur ein Berechtigungs-Kandidat und kein aktiver Produktionszugang.
+
 ## Verhalten bei Problemen
 
 - Keine gültige Code/DB-Abfrage -> kein Administrator-Session-Cookie.
