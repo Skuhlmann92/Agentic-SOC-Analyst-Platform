@@ -5,7 +5,8 @@
 - [x] Im Branch `roadmap/security-hardening-20261111`: TOTP-Verifikation für Administratorzugänge, Datenbank-Replay-Schutz, signierter MFA-Nachweis in Sessions und Eingabe im Login. Technische Anleitung: `docs/ADMIN_TOTP_ROLLOUT.md`.
 - [x] Unit- und statische Sicherheitsregressionstests ergänzt; GitHub Actions Run #157 (Tests + Produktionsbuild) erfolgreich.
 - [x] Migration 008 am 11.11.2026 auf Neon-Staging `security-2fa-validation` angewendet; Schema und atomare Countersperre (temporäre Testtabelle, ohne produktive Daten) geprüft.
-- [ ] Dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen (Staging-Migration 008 bereits angewendet).
+- [x] Staging-Migration 009: NOLOGIN-Rollenkandidat `soc_auth_replay_candidate` angelegt; Rechte per PostgreSQL-ACL abgefragt. Kein schreibender Auth-Test mit Kandidatenrolle (aktueller Owner darf nicht SET ROLE ausführen).
+- [ ] Dedizierte Auth-DB-Rolle konfigurieren- [ ] Dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen (Staging-Migration 008 bereits angewendet).
 - [ ] Vollständige MFA-Recovery, per-User-Enrollment, Reset-Audit und browserbasierte E2E-Abnahme. Kein Kunden-Onboarding vor Freigabe.
 - [ ] Erst nach Freigabe in `main` mergen und separat auf Vercel veröffentlichen; Produktionsumgebung bisher unverändert.
 
