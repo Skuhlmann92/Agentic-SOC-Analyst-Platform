@@ -1,6 +1,6 @@
 "use client";
 
-import {Activity,Bell,Bot,Briefcase,ClipboardCheck,LayoutDashboard,LogOut,Network,Settings,Shield,Sun,Moon,Globe,ChevronsUpDown,ShieldCheck,Menu,X,ScanSearch} from "lucide-react";
+import {Activity,Bell,Bot,Briefcase,ClipboardCheck,LayoutDashboard,LogOut,Network,Settings,Shield,Sun,Moon,Globe,ChevronsUpDown,ShieldCheck,Menu,X,ScanSearch,BookOpen} from "lucide-react";
 import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {useState} from "react";
@@ -19,6 +19,7 @@ const NAV=[
  {href:"/cases",de:"Vorfälle",en:"Cases",icon:Briefcase,group:"response",admin:false,review:false},
  {href:"/investigations",de:"Untersuchungen",en:"Investigations",icon:Activity,group:"response",admin:false,review:false},
  {href:"/agent-workspace",de:"KI-Agent & Skripte",en:"AI workspace",icon:Bot,group:"response",admin:false,review:false},
+ {href:"/soc-academy",de:"SOC Academy",en:"SOC Academy",icon:BookOpen,group:"response",admin:false,review:false},
  {href:"/reviews",de:"Freigaben",en:"Review queue",icon:ClipboardCheck,group:"response",admin:false,review:true},
  {href:"/admin",de:"Verwaltung",en:"Administration",icon:Settings,group:"system",admin:true,review:false},
 ] as const;
