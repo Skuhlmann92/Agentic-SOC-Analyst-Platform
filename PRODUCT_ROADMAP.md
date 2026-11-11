@@ -4,6 +4,7 @@
 
 - [x] **Im Entwicklungsbranch:** RFC-6238-TOTP (6 Stellen / 30 s, +/- 1 Fenster) serverseitig nach Passwortabgleich; atomare Anti-Replay-Sperre in PostgreSQL; `mfaVerifiedAt` zur Entwertung alter Admin-Sessions; Authenticator-Code-Feld im Login.
 - [x] **Im Entwicklungsbranch:** Migration `008_admin_totp_replay.sql`, TOTP-Unit-Tests, Session- und Login-Regressionstests sowie Dokumentation `docs/ADMIN_TOTP_ROLLOUT.md` erstellt. CI-Prüflauf #157 erfolgreich. **Kein produktives MFA-Deployment.**
+- [x] **Staging-Datenbank:** Migration 008 auf vorhandenem Neon-Testbranch `security-2fa-validation` angewendet. Transaktionaler Smoke-Test bestätigte akzeptierten ersten Counter, Abweisung einer Wiederholung und Akzeptanz des nächsthöheren Counters; keine Produktionsänderung.
 - [ ] **Release-Gate:** Migration auf Staging, separate Auth-DB-Rolle, TOTP-Secret im Preview, echte Login- und Replay-End-to-End-Tests, Wiederherstellungsablauf und Rollback.
 - [ ] **Weiterer Ausbau:** Benutzerbezogene MFA-Einrichtung, Recovery-Codes, verschlüsselte Schlüsselablage, sichere Resets und verpflichtende MFA für alle privilegierten B2B-Identitäten.
 
