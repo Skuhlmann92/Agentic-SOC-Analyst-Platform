@@ -21,6 +21,10 @@
 6. Preview neu deployen, Passwort+gültigen Code testen, falschen/fehlenden Code zurückweisen und identischen Code unmittelbar erneut versuchen (muss fehlschlagen). Browser-, API- und Audit-Tests durchführen. Alten Admin-Cookie testen (muss zurückgewiesen werden).
 7. In Produktion **nichts aktivieren**, bevor eine dokumentierte Recovery-Prozedur, getesteter Rollback und vollständige authentifizierte E2E-Abnahme vorliegen. Anschließend Staging-Erkenntnisse gesondert freigeben.
 
+## Verifikation am 11.11.2026
+
+Die additive Migration 008 wurde auf dem vorhandenen Neon-Staging-Branch `security-2fa-validation` angewendet. Prüfung: Tabelle vorhanden, alle drei Spalten mit erwarteten Typen und NOT-NULL vorhanden. Ein transaktionaler Smoke-Test auf einer temporären Tabelle bestätigte: erster Zeitschritt akzeptiert, identischer Zeitschritt abgewiesen (0 Zeilen), höherer Zeitschritt akzeptiert. **Kein Test mit echtem Authenticator-Secret, keiner produktiven Datenbank und keinem authentifizierten Preview-Login.** Die temporäre Testtabelle wurde beim Commit automatisch entfernt.
+
 ## Verhalten bei Problemen
 
 - Keine gültige Code/DB-Abfrage -> kein Administrator-Session-Cookie.
