@@ -4,6 +4,7 @@
 
 - [x] Im Branch `roadmap/security-hardening-20261111`: TOTP-Verifikation für Administratorzugänge, Datenbank-Replay-Schutz, signierter MFA-Nachweis in Sessions und Eingabe im Login. Technische Anleitung: `docs/ADMIN_TOTP_ROLLOUT.md`.
 - [x] Unit- und statische Sicherheitsregressionstests ergänzt; GitHub Actions Run #157 (Tests + Produktionsbuild) erfolgreich.
+- [x] Migration 008 am 11.11.2026 auf Neon-Staging `security-2fa-validation` angewendet; Schema und atomare Countersperre (temporäre Testtabelle, ohne produktive Daten) geprüft.
 - [ ] Migration `008_admin_totp_replay.sql` in Staging ausführen, dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen.
 - [ ] Vollständige MFA-Recovery, per-User-Enrollment, Reset-Audit und browserbasierte E2E-Abnahme. Kein Kunden-Onboarding vor Freigabe.
 - [ ] Erst nach Freigabe in `main` mergen und separat auf Vercel veröffentlichen; Produktionsumgebung bisher unverändert.
