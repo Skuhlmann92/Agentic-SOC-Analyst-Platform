@@ -8,18 +8,34 @@ import { findOperator, isUuid } from "@/lib/operators";
 import { adminMfaRequired, sealSession, SESSION_COOKIE } from "@/lib/session-token";
 
 export async function POST(request: Request) {
-  let body: { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
+  let raw: unknown;
   try {
-    body = (await request.json()) as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
+    raw = await request.json();
   } catch {
     return NextResponse.json(
       { error: { code: "validation_error", message: "The request body is not valid JSON." } },
       { status: 422 },
     );
   }
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
+  // Validate untrusted runtime JSON before reading fields or converting to Buffer.
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return NextResponse.json({ error: { code: "validation_error", message: "Invalid sign-in request." } }, { status: 422 });
   }
+  const fields = raw as Record<string, unknown>;
+  const limits: Record<string, number> = { operator: 128, password: 4096, tenantId: 64, totpCode: 6 };
+  for (const [key, maxLength] of Object.entries(limits)) {
+    if (fields[key] !== undefined &&
+        (typeof fields[key] !== "string" || fields[key].length > maxLength)) {
+      return NextResponse.json(
+        { error: { code: "validation_error", message: "Invalid sign-in request." } },
+        { status: 422 },
+      );
+    }
+  }
+  if (fields.demo !== undefined && typeof fields.demo !== "boolean") {
+    return NextResponse.json({ error: { code: "validation_error", message: "Invalid sign-in request." } }, { status: 422 });
+  }
+  const body = fields as { operator?: string; password?: string; tenantId?: string; demo?: boolean; totpCode?: string };
   if (body.demo === true) {
     const tenantId = "11111111-1111-4111-8111-111111111111";
     const token = await sealSession({
