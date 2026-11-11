@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
+import { GuidedAlertLearning } from "@/components/views/guided-alert-learning";
 import {usePreferences} from "@/lib/preferences";
 import { StatusBadge } from "@/components/severity";
 import { ErrorState, LoadingBlock } from "@/components/states";
@@ -78,6 +79,7 @@ export function AlertDetailView({ alertId, liveTriage=false }: { alertId: string
        <p className="mt-2 text-sm">{row.description||t("Die Quelle hat keine Beschreibung geliefert.","No description was provided by the source.")}</p>
        <p className="mt-2 text-xs text-muted-foreground">{t("Nächster Schritt: Belege und zugehörige Host-Ereignisse prüfen. Schweregrade allein bestätigen keinen Angriff.","Next step: inspect evidence and related host events. Severity alone does not confirm an attack.")}</p>
       </section>
+      <GuidedAlertLearning key={row.id} alert={row} event={event.data} />
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section className="panel rounded-lg p-4">
           <h2 className="text-sm font-medium">{t("Erkennung und Metadaten","Detection and metadata")}</h2>
