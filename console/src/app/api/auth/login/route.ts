@@ -7,7 +7,22 @@ import { NextResponse } from "next/server";
 import { findOperator, isUuid } from "@/lib/operators";
 import { adminMfaRequired, sealSession, SESSION_COOKIE } from "@/lib/session-token";
 
+function failedAdminLogin() {
+  return NextResponse.json(
+    { error: { code: "unauthenticated", message: "Anmeldung fehlgeschlagen. Passwort und Einmalcode prüfen." } },
+    { status: 401, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function POST(request: Request) {
+  // Defense-in-depth: login is a browser state mutation; also guard the route itself.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return NextResponse.json(
+      { error: { code: "invalid_origin", message: "Cross-origin login denied." } },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   let raw: unknown;
   try {
     raw = await request.json();
@@ -67,10 +82,7 @@ export async function POST(request: Request) {
   if (body.operator === "admin" && adminPassword && safeMatch(adminPassword,provided)) {
     const requireMfa = adminMfaRequired();
     if (requireMfa && !(await verifyAndConsumeAdminTotp(body.totpCode, adminName))) {
-      return NextResponse.json(
-        { error: { code: "unauthenticated", message: "Anmeldung fehlgeschlagen. Passwort und Einmalcode prüfen." } },
-        { status: 401, headers: { "Cache-Control": "no-store" } },
-      );
+      return failedAdminLogin();
     }
     const token = await sealSession({
       sub: adminName, role: "admin", name: "SOC Administrator",
@@ -82,6 +94,9 @@ export async function POST(request: Request) {
       httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:60*60*8,
     });
     return response;
+  }
+  if (body.operator === "admin" && (process.env.NODE_ENV === "production" || Boolean(adminPassword))) {
+    return failedAdminLogin();
   }
   // Local sample accounts have known credentials: never permit them in production.
   if (process.env.NODE_ENV === "production" || process.env.ENABLE_LOCAL_OPERATORS !== "true") {
