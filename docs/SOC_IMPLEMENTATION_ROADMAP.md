@@ -6,7 +6,7 @@
 - [x] Unit- und statische Sicherheitsregressionstests ergänzt; GitHub Actions Run #157 (Tests + Produktionsbuild) erfolgreich.
 - [x] Migration 008 am 11.11.2026 auf Neon-Staging `security-2fa-validation` angewendet; Schema und atomare Countersperre (temporäre Testtabelle, ohne produktive Daten) geprüft.
 - [x] Staging-Migration 009: NOLOGIN-Rollenkandidat `soc_auth_replay_candidate` angelegt; Rechte per PostgreSQL-ACL abgefragt. Kein schreibender Auth-Test mit Kandidatenrolle (aktueller Owner darf nicht SET ROLE ausführen).
-- [ ] Dedizierte Auth-DB-Rolle konfigurieren- [ ] Dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen (Staging-Migration 008 bereits angewendet).
+- [ ] Dedizierte Auth-DB-Rolle konfigurieren und den Preview-Login mit echten TOTP-Codes prüfen (Staging-Migration 008 bereits angewendet).
 - [ ] Vollständige MFA-Recovery, per-User-Enrollment, Reset-Audit und browserbasierte E2E-Abnahme. Kein Kunden-Onboarding vor Freigabe.
 - [ ] Erst nach Freigabe in `main` mergen und separat auf Vercel veröffentlichen; Produktionsumgebung bisher unverändert.
 
@@ -74,3 +74,27 @@ Stand: 2026-11-05. Nutzerauftrag: Nach den jetzt umzusetzenden Schritten auch di
 - Funde mit Quellenbelegen und Stand der Datenerfassung.
 - Keine Passwörter/Token in Repository, Browser oder Telemetrie.
 - UI deutsch/englisch und Dark/Light, Zeit Europe/Berlin.
+
+
+## Verbindlicher Closeout-Status — 27.11.2026
+
+### Tatsächlich abgeschlossen
+- [x] Roadmap-PR #11 mit verifiziertem MFA-Produktionsstatus in `main` gemergt.
+- [x] Vercel-Produktionsvariablen ohne Entschlüsselung geprüft: `SOC_ADMIN_TOTP_SECRET` und `SOC_REQUIRE_ADMIN_MFA` sind in Production nicht vorhanden.
+- [x] Security-CI: letzter geprüfter Lauf auf `main` vom 11.11.2026 erfolgreich; der Lauf belegt nicht den aktuellen Code-Stand dieses Closeouts.
+- [x] P0/P1/P2-Produktvorschläge in `PRODUCT_ROADMAP.md` aufgenommen.
+
+### Weiterhin blockiert — nicht als erledigt markieren
+- [ ] **Admin-MFA Production:** Passwort-only-Login bleibt möglich, bis das Secret sicher provisioniert, die Datenbankrolle und Replay-Persistenz getestet, Recovery eingerichtet und Preview-E2E abgenommen ist. Ein persönlicher Authenticator-Schritt ist erforderlich.
+- [ ] **Production DB Least Privilege:** Der dokumentierte Runtime-Stand nutzt weiterhin `neondb_owner`; RLS ist damit für den produktiven App-Zugriff nicht ausreichend erzwungen. Keine Kundenfreigabe, bis der Cutover mit echten Login-Credentials und Negativtests abgeschlossen ist.
+- [ ] **Read-path Cutover:** `SOC_READ_DB_ENABLED` bleibt in Production deaktiviert, bis authentifizierte Preview-API-Tests alle erforderlichen Dashboard-Abfragen abdecken.
+- [ ] **Write-/Ingest-Cutover:** getrennte Rollen, Audit, Ingest- und Schreibpfade inklusive Rollback vollständig testen.
+- [ ] **Vercel Release:** aktuelles Deployment auf neuestem Main-SHA, nicht nur den bisherigen READY-Stand, verifizieren.
+
+### Benötigte Freigaben/Zugänge für echte Fertigstellung
+1. Authenticator-Einrichtung für das Admin-Konto und sichere Secret-Provisionierung über Vercel UI/Secret Store.
+2. Autorisierter Neon-Staging-Branch und geeignete administrative Möglichkeit, getrennte LOGIN-Rollen zu erstellen und zu testen.
+3. Freigabe für eine zeitlich geplante Produktionsmigration nach erfolgreicher Staging-Abnahme.
+4. Autorisierter Zugriff auf Wazuh-Manager-API-Zugangsdaten für die vollständige Posture-/Agentenintegration.
+
+**Sicherheitsentscheidung:** Keine Produktionsdatenbank- oder Authentifizierungsänderung wurde ohne getesteten Rollback und explizite Freigabe ausgeführt. Der externe Kundenbetrieb bleibt gesperrt, bis alle P0-Gates bestanden sind.

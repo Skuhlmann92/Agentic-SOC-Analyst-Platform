@@ -25,7 +25,7 @@
 - [x] **Im Entwicklungsbranch:** Migration `008_admin_totp_replay.sql`, TOTP-Unit-Tests, Session- und Login-Regressionstests sowie Dokumentation `docs/ADMIN_TOTP_ROLLOUT.md` erstellt. CI-Prüflauf #157 erfolgreich. **Kein produktives MFA-Deployment.**
 - [x] **Staging-Datenbank:** Migration 008 auf vorhandenem Neon-Testbranch `security-2fa-validation` angewendet. Transaktionaler Smoke-Test bestätigte akzeptierten ersten Counter, Abweisung einer Wiederholung und Akzeptanz des nächsthöheren Counters; keine Produktionsänderung.
 - [x] **Staging-Rollenmodell:** Migration 009 mit NOLOGIN/NOBYPASSRLS-Kandidatenrolle und spaltenbezogenen Replay-Rechten eingespielt. ACL-Prüfung bestätigt kein DELETE und keinen SELECT-Zugriff auf Ingest-Secrets; echter Rollen-Login und Replay-Schreibtest noch offen.
-- [ ] **Release-Gate:** Separate Auth-DB-Rolle- [ ] **Release-Gate:** Separate Auth-DB-Rolle, TOTP-Secret im Preview, echte Login- und Replay-End-to-End-Tests, Wiederherstellungsablauf und Rollback. (Staging-Migration bereits angewendet.)
+- [ ] **Release-Gate:** Separate Auth-DB-Rolle, TOTP-Secret im Preview, echte Login- und Replay-End-to-End-Tests, Wiederherstellungsablauf und Rollback. (Staging-Migration bereits angewendet.)
 - [ ] **Weiterer Ausbau:** Benutzerbezogene MFA-Einrichtung, Recovery-Codes, verschlüsselte Schlüsselablage, sichere Resets und verpflichtende MFA für alle privilegierten B2B-Identitäten.
 
 Updated: 2026-11-07. Features #3–#5 were merged and deployed via PR #3. Subsequent UX and localization work is tracked below.
@@ -265,3 +265,54 @@ No unreviewed automatic approvals, isolation or remediation operations are plann
 4. Erst nach dokumentierter Freigabe Production-MFA aktivieren.
 5. Danach P0-Auditspur und vollständige de-DE-Qualitätssicherung fortsetzen.
 
+
+
+## Produkt-Erweiterungsvorschläge — priorisiert am 27.11.2026
+
+Diese Vorschläge sind in die verbindliche Roadmap aufgenommen. Sie sind **geplant, nicht bereits implementiert**. Die Umsetzung erfolgt in kleinen, testbaren Changesets.
+
+### P0 — Vor externem Kundenbetrieb
+
+- [ ] **SEC-07 — Produktions-DB-Cutover:** `neondb_owner` aus dem Runtime-Pfad entfernen; getrennte Login-Rollen für Read, Ingest, Auth und kontrollierte Writes; Least Privilege, RLS mit echten DB-Logins, negative Cross-Tenant-Tests und Rollback nachweisen. Schreibpfade (Alert-Status, Audit, Triage, Inventory UPSERT, Ingest RETURNING) separat absichern.
+- [ ] **SEC-08 — Backup & Disaster Recovery:** automatisierte verschlüsselte Backups, getrennte Aufbewahrung, dokumentierte RPO/RTO, regelmäßige Restore-Übungen und Alarmierung bei fehlgeschlagenen Backups.
+- [ ] **SEC-09 — Betriebs- und Sicherheitsobservability:** zentrale strukturierte Logs, Request-/Correlation-IDs, Audit-Events, Health-/Readiness-Checks, Datenquellen-Frische, Fehlerraten und Kostenbudgets; keine Secrets oder unnötigen personenbezogenen Daten loggen.
+- [ ] **SEC-10 — Supply-Chain-Schutz:** reproduzierbare Lockfiles/Builds, Dependency- und Secret-Scanning, SBOM, signierte Releases und dokumentierte Schwachstellenbehandlung.
+- [ ] **SEC-11 — Mandanten-Onboarding-Sicherheitsgrenzen:** Einladung, Rollenvergabe, Connector-Token-Rotation und Deprovisionierung mit Audit, Tenant-Negativtests und sicherer Standard-Deaktivierung.
+- [ ] **SEC-12 — Privacy & Retention:** Dateninventar, Zweckbindung, Lösch- und Exportprozesse, konfigurierbare Aufbewahrung, minimale Telemetrie und dokumentierte Datenflüsse für KI-Provider.
+
+### P1 — Analystenproduktivität und Lernprodukt
+
+- [ ] **ACADEMY-01 — Persistenter Lernfortschritt:** serverseitige Speicherung pro Benutzer und Organisation, Resume, Modulversionen, Fortschrittshistorie, Export/Löschung; keine Roh-Alert-Daten in Lernprofilen.
+- [ ] **ACADEMY-02 — Interaktive Fall-Labs:** reproduzierbare synthetische Windows-/Linux-Szenarien mit Logs, Fragen, Hinweisen, Musterlösung und Schwierigkeitsstufen. Trainingsdaten strikt vom Live-Tenant isolieren.
+- [ ] **ACADEMY-03 — KI-Mentor:** opt-in, evidenzgebunden und didaktisch; zuerst Rückfragen/Hinweise, dann Lösung. Jede Tatsachenbehauptung mit Alert-/Event-Referenz, Datenlücken sichtbar, Prompt-Injection-Schutz und Nutzungs-/Kostenlimits.
+- [ ] **ACADEMY-04 — Kompetenzmatrix:** nachvollziehbare Bewertung von Triage, Hypothesenbildung, Evidenzprüfung, MITRE-Zuordnung und Abschlussbericht. Keine Bewertung allein anhand von Geschwindigkeit oder Alert-Menge.
+- [ ] **SOC-01 — Incident Timeline:** Ereignisse aus Authentifizierung, Prozessstart, Services, Sysmon, Netzwerk und Wazuh nach verifizierter Zeit und Quelle zusammenführen; fehlende Daten und Zeitzonen explizit markieren.
+- [ ] **SOC-02 — Entity Graph:** Host-, Benutzer-, Prozess-, IP-, Domain- und Alert-Beziehungen mit Quellenherkunft, Zeitfenster und Confidence-Begründung; keine impliziten Identitätszusammenführungen.
+- [ ] **SOC-03 — Context Enrichment:** Host-/Benutzer-/Indikatorhistorie und Schwachstellen bei Bedarf abrufen; Scope, Rate Limits, Datenschutz, Cache und Quellenzeitpunkt dokumentieren.
+- [ ] **SOC-04 — Alert-Deduplizierung & Case Continuity:** Deduplizierung nach stabilen Event-/Check-IDs und Status, persistente Analystenentscheidungen, nachvollziehbare Wiederöffnung und Zusammenführung.
+
+### P1 — Kundenmehrwert und kommerzielle Betriebsfähigkeit
+
+- [ ] **BIZ-01 — Kundenberichte:** reproduzierbare Management- und Technikberichte mit Datenabdeckung, Quellen, Zeitraum, offenen Risiken, Maßnahmen und klaren Grenzen von MTTD/MTTR.
+- [ ] **BIZ-02 — Kunden-Onboarding:** geführte Einrichtung von Organisation, Mitgliedern, Rollen, Wazuh-Connector und Agenten; Connectivity-Test, Datenvorschau, Berechtigungsprüfung und Audit.
+- [ ] **BIZ-03 — Service-Level & Benachrichtigungen:** konfigurierbare Prioritäten, Eskalation, Digest, Zustellnachweis, Anti-Spam und Rollenbezug.
+- [ ] **BIZ-04 — Nutzungs-/Lizenzkontingente:** serverseitige Limits für Datenvolumen, KI-Aufrufe, Benutzer und Assets; transparente Verbrauchsanzeige und Grace Period. Zahlungsabwicklung bleibt separat freigabepflichtig.
+- [ ] **BIZ-05 — Support- und Exportfähigkeit:** Diagnosedatenpaket ohne Secrets, Support-Zugriff mit zeitlicher Begrenzung und Zustimmung, revisionsfähiger Export sowie nachvollziehbare Datenlöschung.
+
+### P2 — Erweiterte Plattform
+
+- [ ] **PLAT-01 — Multi-Region/Resilienz:** Verfügbarkeits- und Wiederanlaufkonzept, Abhängigkeiten und Failover-Tests.
+- [ ] **PLAT-02 — Erweiterbare Connectoren:** dokumentierte Connector-Schnittstelle für weitere EDR-, Cloud-, Identity- und Firewall-Quellen mit einheitlichem Normalisierungsschema.
+- [ ] **PLAT-03 — Regel-/Modellqualität:** versionierte Detektions- und Analyseversionen, Regression-Datasets, Drift-/False-Positive-Auswertung und kontrollierte Rollouts.
+- [ ] **PLAT-04 — Kundenindividuelle Richtlinien:** genehmigte Aufbewahrung, Eskalation, Berichtsvorlagen und Connector-Policies mit sicheren Defaults.
+
+### Verbindliche Reihenfolge und Abhängigkeiten
+
+1. **SEC-07 + MFA-Release-Gates + Audit:** vor jeder externen Kundenfreigabe.
+2. **SEC-08 bis SEC-12:** vor produktivem B2B-Betrieb, abhängig von Datenfluss und Betriebsmodell.
+3. **ACADEMY-01 bis ACADEMY-04:** nach Tenant-/RLS-Fundament; synthetische Labs können unabhängig und ohne Live-Daten beginnen.
+4. **SOC-01 bis SOC-04:** auf stabiler Datenprovenienz, Entity-Modell und Audit aufbauen.
+5. **BIZ-01 bis BIZ-05:** nach reproduzierbaren Kennzahlen und sicherem Onboarding.
+6. **PLAT-01 bis PLAT-04:** nach belastbarem Pilotbetrieb.
+
+**Release-Regel:** Keine Checkbox wird allein durch Dokumentation geschlossen. Abschluss erfordert Code, passende Migration, positive und negative Tests, Preview-Verifikation und dokumentierte Freigabe. Kritische Produktionsänderungen benötigen Backup, Rollback und explizite Freigabe.
