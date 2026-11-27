@@ -19,7 +19,7 @@
 **Sicherheitsabgrenzung:** Erklärung, Übungsabschluss oder KI-Antwort sind weder Incident-Urteil noch Berechtigung zur Remediation. Auch die „Experten“-Ansicht schaltet keine automatisierten Hostmaßnahmen frei.
 
 
-## Security iteration 11.11.2026 — Administrator-2FA (Draft PR #9)
+## Security iteration 11.11.2026 — Administrator-2FA (PR #9, in main; production rollout pending)
 
 - [x] **Im Entwicklungsbranch:** RFC-6238-TOTP (6 Stellen / 30 s, +/- 1 Fenster) serverseitig nach Passwortabgleich; atomare Anti-Replay-Sperre in PostgreSQL; `mfaVerifiedAt` zur Entwertung alter Admin-Sessions; Authenticator-Code-Feld im Login.
 - [x] **Im Entwicklungsbranch:** Migration `008_admin_totp_replay.sql`, TOTP-Unit-Tests, Session- und Login-Regressionstests sowie Dokumentation `docs/ADMIN_TOTP_ROLLOUT.md` erstellt. CI-Prüflauf #157 erfolgreich. **Kein produktives MFA-Deployment.**
@@ -239,3 +239,29 @@ No unreviewed automatic approvals, isolation or remediation operations are plann
 4. **P1 Kundenmehrwert:** SEC-06 nach belastbaren Datenmodellen, Tenant-Isolation und Report-Kennzahlen.
 
 **Übergreifende Definition of Done:** Implementierung und Datenbankmigration dokumentiert; Unit-/Integrations-/Sicherheitstests grün; Tenant- und Rollen-Negativtests bestanden; Logging/Audit vorhanden; UI de-DE/EN geprüft; Preview und Deployment verifiziert. Checkboxen erst nach tatsächlicher Prüfung abhaken.
+
+
+## Produktionsstatus und nächste P0-Gates — 27.11.2026
+
+**Verifizierter Repository-/Vercel-Stand:** Production-Deployment basiert auf `main` Commit `0b5c407001a1db2f4b9a6f15bea25aad0a50e60f` (Release SOC Academy und Admin-MFA-Härtung). Der Deployment-Status ist `READY`; das ist kein Nachweis für eine vollständige Sicherheitsabnahme.
+
+### P0 — Admin-MFA ist implementiert, aber in Production nicht aktiviert
+
+- [x] Login-Code prüft TOTP serverseitig nach dem Passwort und bindet `mfaVerifiedAt` an die Admin-Session.
+- [x] Atomare Replay-Sperre und Fail-closed-Verhalten bei Datenbankfehlern sind implementiert und durch automatisierte Login-/TOTP-Regressionstests abgedeckt.
+- [x] Security-CI-Workflow führt Console-Tests und Production-Build aus.
+- [ ] **Production-Konfiguration:** Vercel-Produktionsumgebung enthält zum Prüfzeitpunkt weder `SOC_ADMIN_TOTP_SECRET` noch `SOC_REQUIRE_ADMIN_MFA`. Der Admin-Login kann daher derzeit Passwort-only erfolgen. MFA darf nicht als produktiv aktiviert oder abgeschlossen beworben werden.
+- [ ] **Datenbank:** Migration 008 wurde laut Rollout-Dokumentation nur auf dem Neon-Staging-Branch angewendet. Migration 009 stellt lediglich eine NOLOGIN-Kandidatenrolle bereit; eine dedizierte LOGIN-Rolle und ein echter Replay-Schreibtest fehlen.
+- [ ] **Recovery:** Kein getesteter Wiederherstellungsprozess und keine Recovery-Codes vorhanden.
+- [ ] **Release-Abnahme:** Staging-Login mit echtem Authenticator, fehlendem/falschem/wiederverwendetem Code, parallelen Anfragen, DB-Ausfall, Session-Invalidierung und Rollback testen; danach Production-Rollout separat freigeben.
+
+**Wichtig:** Keine Änderung an Produktions-Secrets oder Produktionsdatenbank im Rahmen dieser Roadmap-Dokumentation. Die MFA-Aktivierung bleibt ein kontrollierter, separater Release-Schritt.
+
+### Nächste konkrete Umsetzung
+
+1. Dedizierte Auth-Datenbankrolle und Replay-Tabelle in einer isolierten Staging-Umgebung vollständig testen.
+2. Recovery-/Rollback-Verfahren festlegen und testen.
+3. MFA in Vercel Preview aktivieren und authentifizierte Browser-End-to-End-Abnahme durchführen.
+4. Erst nach dokumentierter Freigabe Production-MFA aktivieren.
+5. Danach P0-Auditspur und vollständige de-DE-Qualitätssicherung fortsetzen.
+
